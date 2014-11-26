@@ -1,0 +1,35 @@
+{
+	"ImportPath": "github.com/eagerio/stout",
+	"GoVersion": "go1.2.1",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "code.google.com/p/go.net/html",
+			"Comment": "null-143",
+			"Rev": "6a58d15273e127ff2697fa5a848435af0ea1255d"
+		},
+		{
+			"ImportPath": "github.com/crowdmob/goamz/aws",
+			"Rev": "c5ba9ad45b6ac022326f0ff9762d6bac33ca8f88"
+		},
+		{
+			"ImportPath": "github.com/crowdmob/goamz/s3",
+			"Rev": "c5ba9ad45b6ac022326f0ff9762d6bac33ca8f88"
+		},
+		{
+			"ImportPath": "github.com/imdario/mergo",
+			"Comment": "0.1.3-7-ge1856b2",
+			"Rev": "e1856b2128eb93453caf1f21d4f1d9926ebeb593"
+		},
+		{
+			"ImportPath": "github.com/wsxiaoys/terminal/color",
+			"Rev": "9dcaf1d63119a8ac00eef82270eaef08b6aa2328"
+		},
+		{
+			"ImportPath": "gopkg.in/yaml.v1",
+			"Rev": "feb4ca79644e8e7e39c06095246ee54b1282c118"
+		}
+	]
+}
