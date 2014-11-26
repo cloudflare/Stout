@@ -20,7 +20,7 @@ Stout is a deploy tool for static websites.  It takes a website and uploads it t
 
 ## Getting Started
 
-Download the `stout` executable for your system from our latest release into a directory on your `$PATH`, like `/usr/local/bin`.
+[Download](https://github.com/EagerIO/Stout/releases) the `stout` executable for your system from our latest release into a directory on your `$PATH`, like `/usr/local/bin`.
 
 If you don't already have a site, our [Creating a Site](https://github.com/EagerIO/Stout/blob/master/docs/getting-started.md) doc will help you get started.
 
@@ -237,6 +237,11 @@ As the final step of the deploy is atomic, multiple actors can trigger deploys s
 ### Deploying Multiple Projects To One Site
 
 You can deploy multiple projects to the same domain simply by specifying the appropriate `dest` for each one.  For example your homepage might have the dest `./`, and your blog `./blog`.  Your homepage will be hosted at `your-site.com`, your blog `your-site.com/blog`.
+
+### Installing
+
+- Download the release for your system type from our [releases](https://github.com/EagerIO/Stout/releases)
+- Copy or symlink the `stout` binary contained in the archive into your path (for example, into `/usr/local/bin`)
 
 ### Building
 
