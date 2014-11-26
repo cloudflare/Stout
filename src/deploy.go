@@ -150,7 +150,7 @@ func deployFiles(options Options, includeHash bool, files []*FileRef) {
 
 	for _, file := range files {
 		if !includeHash && strings.HasSuffix(file.RemotePath, ".html") {
-			panic(fmt.Sprintf("Cowardly refusing to deploy an html file (%s) without versioning.  Add the file to the --html list to deploy with versioning.", file.RemotePath))
+			panic(fmt.Sprintf("Cowardly refusing to deploy an html file (%s) without versioning.", file.RemotePath))
 		}
 
 		ch <- file
