@@ -248,7 +248,7 @@ You can deploy multiple projects to the same domain simply by specifying the app
 
 - Run `go get github.com/laher/goxc`
 - Run `go get code.google.com/p/go.tools/cmd/vet`
-- Run `goxc -tasks-=package -d=./builds`
+- Run `./utils/xc.sh`
 
 The first run will take significantly longer than future runs.  The built files will be placed in the `./builds` directory.
 
