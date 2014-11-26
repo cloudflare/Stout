@@ -60,17 +60,20 @@ type Options struct {
 	AWSSecret  string `yaml:"secret"`
 }
 
-func parseOptions() (o Options) {
-	flag.StringVar(&o.Files, "files", "*", "Comma-seperated glob patterns of files to deploy (within root)")
-	flag.StringVar(&o.Root, "root", "./", "The local directory to deploy")
-	flag.StringVar(&o.Dest, "dest", "./", "The destination directory to write files to in the S3 bucket")
-	flag.StringVar(&o.ConfigFile, "config", "", "A yaml file to read configuration from")
-	flag.StringVar(&o.Env, "env", "", "The env to read from the config file")
-	flag.StringVar(&o.Bucket, "bucket", "", "The bucket to deploy to")
-	flag.StringVar(&o.AWSKey, "key", "", "The AWS key to use")
-	flag.StringVar(&o.AWSSecret, "secret", "", "The AWS secret of the provided key")
+func parseOptions() (o Options, set *flag.FlagSet) {
+	set = flag.NewFlagSet(os.Args[1], flag.ExitOnError)
+	//TODO: Set set.Usage
 
-	flag.Parse()
+	set.StringVar(&o.Files, "files", "*", "Comma-seperated glob patterns of files to deploy (within root)")
+	set.StringVar(&o.Root, "root", "./", "The local directory to deploy")
+	set.StringVar(&o.Dest, "dest", "./", "The destination directory to write files to in the S3 bucket")
+	set.StringVar(&o.ConfigFile, "config", "", "A yaml file to read configuration from")
+	set.StringVar(&o.Env, "env", "", "The env to read from the config file")
+	set.StringVar(&o.Bucket, "bucket", "", "The bucket to deploy to")
+	set.StringVar(&o.AWSKey, "key", "", "The AWS key to use")
+	set.StringVar(&o.AWSSecret, "secret", "", "The AWS secret of the provided key")
+
+	set.Parse(os.Args[2:])
 
 	return
 }

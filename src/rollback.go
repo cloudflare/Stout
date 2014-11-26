@@ -1,10 +1,12 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"path/filepath"
+	"sync"
+
+	"github.com/crowdmob/goamz/s3"
 )
 
 func Rollback(options Options, version string) {
@@ -17,7 +19,9 @@ func Rollback(options Options, version string) {
 	// List files with the correct prefix in bucket
 	// Remove their prefix with a copy.
 
-	list, err := bucket.List(version+"/", "", "", 1000)
+	prefix := filepath.Join(options.Dest, version) + "/"
+
+	list, err := bucket.List(prefix, "", "", 1000)
 	panicIf(err)
 
 	if list.IsTruncated {
@@ -28,29 +32,38 @@ func Rollback(options Options, version string) {
 		return
 	}
 
+	wg := sync.WaitGroup{}
+
 	count := 0
 	for _, file := range list.Contents {
-		path := file.Key
-		if filepath.Ext(path) != ".html" {
-			log.Printf("Skipping non-html file %s", path)
-			continue
-		}
+		wg.Add(1)
+		go func(file s3.Key) {
+			defer wg.Done()
 
-		newPath := path[len(version)+1:]
+			path := file.Key
+			if filepath.Ext(path) != ".html" {
+				log.Printf("Skipping non-html file %s", path)
+				return
+			}
 
-		log.Printf("Replacing %s with %s", path, newPath)
+			newPath := filepath.Join(options.Dest, path[len(prefix):])
 
-		copyFile(bucket, filepath.Join(options.Bucket, path), newPath, "text/html", LIMITED)
+			log.Printf("Aliasing %s to %s", path, newPath)
 
-		count++
+			copyFile(bucket, path, newPath, "text/html", LIMITED)
+
+			count++
+		}(file)
 	}
+
+	wg.Wait()
 
 	log.Printf("Reverted %d HTML files to version %s", count, version)
 }
 
 func rollbackCmd() {
-	options := parseOptions()
-	version := flag.Arg(1)
+	options, set := parseOptions()
+	version := set.Arg(0)
 
 	loadConfigFile(&options)
 

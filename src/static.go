@@ -17,9 +17,9 @@ stout deploy --bucket my-bucket --key AWS_KEY --secret AWS_SECRET
 
 To rollback to a specific deploy:
 
-stout rollback c4a22bf94de1 --bucket my-bucket --key AWS_KEY --secret AWS_SECRET
+stout rollback --bucket my-bucket --key AWS_KEY --secret AWS_SECRET c4a22bf94de1
 
-See the README for full configuration.
+See the README for more configuration information.
 `)
 }
 

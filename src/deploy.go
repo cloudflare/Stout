@@ -550,7 +550,7 @@ func Deploy(options Options) {
 }
 
 func deployCmd() {
-	options := parseOptions()
+	options, _ := parseOptions()
 	loadConfigFile(&options)
 
 	if options.Bucket == "" {

@@ -47,7 +47,7 @@ Javascript and CSS included in your HTML files will always be included automatic
 The deploy command will give you a deploy id you can use in the future to rollback if you have to:
 
 ```sh
-stout rollback a3b8ff290c33 --bucket my-bucket --key MY_AWS_KEY --secret MY_AWS_SECRET
+stout rollback --bucket my-bucket --key MY_AWS_KEY --secret MY_AWS_SECRET a3b8ff290c33
 ```
 
 Eventually you'll probably want to move your config to a deploy.yaml file, rather than specifying it in the command every time.
