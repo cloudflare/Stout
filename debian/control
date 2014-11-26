@@ -1,0 +1,6 @@
+Package: stout
+Source: stout
+Version: v1.0.0
+Architecture: all
+Maintainer: Zack Bloom <zack@eager.io>
+Description: The Reliable Static Deploy Tool

@@ -16,6 +16,17 @@ UPLOAD_URL=$(curl -X POST "https://api.github.com/repos/EagerIO/Stout/releases" 
   \"tag_name\": \"$RELEASE\"
 }" | jq -r '.upload_url' | cut -d { -f 1)
 
+mkdir -p debian
+
+echo "
+Package: stout
+Source: stout
+Version: $RELEASE
+Architecture: all
+Maintainer: Zack Bloom <zack@eager.io>
+Description: The reliable static website deploy tool
+" > `dirname $0`/../control
+
 `dirname $0`/xc.sh
 
 upload () {
