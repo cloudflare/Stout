@@ -8,7 +8,7 @@ We're going to create a basic site config which uses CloudFront's CDN to deliver
 The Deploy Tool -> S3 <- CloudFront's Global CDN <- DNS <- Your Users
 ```
 
-The simplest way to get started is to run the `create_site.sh` script in the utils folder.  After installing the aws command line tools, run:
+The simplest way to get started is to run the `create_site.sh` script in the utils folder.  After installing the [aws command line tools](http://aws.amazon.com/cli/), run:
 
 ```bash
 ./utils/create_site.sh subdomain.my-site.com
