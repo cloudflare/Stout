@@ -238,6 +238,10 @@ As the final step of the deploy is atomic, multiple actors can trigger deploys s
 
 You can deploy multiple projects to the same domain simply by specifying the appropriate `dest` for each one.  For example your homepage might have the dest `./`, and your blog `./blog`.  Your homepage will be hosted at `your-site.com`, your blog `your-site.com/blog`.
 
+### Using Client-side Routers
+
+It is possible to use a client-side router (where you have multiple request URLs point to the same HTML file) by configuring your CloudFront distribution to serve your index.html file in response to 403s and 404s.
+
 ### Installing
 
 - Download the release for your system type from our [releases](https://github.com/EagerIO/Stout/releases)
