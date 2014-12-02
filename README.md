@@ -242,6 +242,8 @@ You can deploy multiple projects to the same domain simply by specifying the app
 
 It is possible to use a client-side router (where you have multiple request URLs point to the same HTML file) by configuring your CloudFront distribution to serve your index.html file in response to 403s and 404s.
 
+![CF](https://raw.githubusercontent.com/EagerIO/Stout/master/docs/images/cf-screenshot.png)
+
 ### Installing
 
 - Download the release for your system type from our [releases](https://github.com/EagerIO/Stout/releases)
