@@ -1,8 +1,17 @@
 # Stout
 
-Stout is a deploy tool for static websites.  It takes a website and uploads it to S3.
+Stout is a deploy tool for static websites.  It takes a website and uploads it to S3 in a more reliable way than other tools.  It can be an alternative
+to paid services like Divshot, to dynamic web servers like Rails, or to manually uploading your site to S3 or an FTP server.
 
-### Unlike other tools it:
+## Why You Need Stout
+
+Traditionally uploading your files to S3 introduces a serious caching issue we ran into in practice at [Eager](https://eager.io).
+The cache for the various files your site depends on can expire at different times, meaning your users get an inconsistent (broken) set of files for a
+time after every single deploy.  Further, traditional static site deployments don't offer any method of rolling back a previous deploy.
+
+We built Stout to fix these issues.
+
+### Features
 
 - Versions script and style files to ensure your pages don't use an inconsistent set of files during or after a deploy
 - Supports rollback to any previous version
@@ -11,12 +20,12 @@ Stout is a deploy tool for static websites.  It takes a website and uploads it t
 - Can be used by multiple developers simultaneously without locking or a danger of inconsistent state
 - Properly handles caching headers
 - Supports deploying multiple projects to various subdirectories of the same site without conflicts
+- Compresses files for faster delivery
 
-### It doesn't yet:
+### Limitations
 
-- Support rolling back files that aren't HTML, JS or CSS (images, videos, etc.)
-- Support custom cache configurations
-- All-or-nothing consistency is only guarenteed on a per-html-file basis, not for the entire deploy
+- Stout doesn't currently support rolling back files that aren't HTML, JS or CSS (images, videos, etc.).  See the Versioning section for more information.
+- All-or-nothing consistency is only guarenteed on a per-html-file basis, not for the entire deploy.  See the Consistency section for more information.
 
 ## Getting Started
 
