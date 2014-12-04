@@ -454,6 +454,10 @@ func Deploy(options Options) {
 
 	htmlFileRefs := filesWithExtension(files, ".html")
 
+	if len(htmlFileRefs) == 0 {
+		panic("Error: No HTML files found")
+	}
+
 	inclFiles := make(map[string]*FileRef)
 	htmlFiles := make([]HTMLFile, len(htmlFileRefs))
 	for i, file := range htmlFileRefs {
