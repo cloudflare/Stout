@@ -20,12 +20,17 @@ const (
 
 var s3Session *s3.S3
 
-func openS3(key, secret string) *s3.S3 {
+func openS3(key, secret, region string) *s3.S3 {
+	regionS, ok := aws.Regions[region]
+	if !ok {
+		panic("Region not found")
+	}
+
 	auth := aws.Auth{
 		AccessKey: key,
 		SecretKey: secret,
 	}
-	return s3.New(auth, aws.USEast)
+	return s3.New(auth, regionS)
 }
 
 func panicIf(err error) {
@@ -58,6 +63,7 @@ type Options struct {
 	Bucket     string `yaml:"bucket"`
 	AWSKey     string `yaml:"key"`
 	AWSSecret  string `yaml:"secret"`
+	AWSRegion  string `yaml:"region"`
 }
 
 func parseOptions() (o Options, set *flag.FlagSet) {
@@ -72,6 +78,7 @@ func parseOptions() (o Options, set *flag.FlagSet) {
 	set.StringVar(&o.Bucket, "bucket", "", "The bucket to deploy to")
 	set.StringVar(&o.AWSKey, "key", "", "The AWS key to use")
 	set.StringVar(&o.AWSSecret, "secret", "", "The AWS secret of the provided key")
+	set.StringVar(&o.AWSRegion, "region", "us-east-1", "The AWS region the S3 bucket is in")
 
 	set.Parse(os.Args[2:])
 

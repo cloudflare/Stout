@@ -447,7 +447,7 @@ func (f HTMLFile) GetLocalPath() string {
 
 func Deploy(options Options) {
 	if s3Session == nil {
-		s3Session = openS3(options.AWSKey, options.AWSSecret)
+		s3Session = openS3(options.AWSKey, options.AWSSecret, options.AWSRegion)
 	}
 
 	files := listFiles(options)

@@ -11,7 +11,7 @@ import (
 
 func Rollback(options Options, version string) {
 	if s3Session == nil {
-		s3Session = openS3(options.AWSKey, options.AWSSecret)
+		s3Session = openS3(options.AWSKey, options.AWSSecret, options.AWSRegion)
 	}
 
 	bucket := s3Session.Bucket(options.Bucket)
@@ -76,8 +76,6 @@ func rollbackCmd() {
 	if version == "" {
 		panic("You must specify a version to rollback to")
 	}
-
-	s3Session = openS3(options.AWSKey, options.AWSSecret)
 
 	Rollback(options, version)
 }
