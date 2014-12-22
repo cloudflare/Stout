@@ -113,7 +113,10 @@ The options are:
   The AWS key to use.  We recommend you create an IAM user for each project with access only to the relevant bucket.  See the Permissions section for more information.
   
 ##### `secret`
-  The AWS secret of the provided key
+  The AWS secret of the provided key.
+
+##### `region` ("us-east-1")
+  The AWS region the S3 bucket is located in.
    
 ### YAML Config
 
