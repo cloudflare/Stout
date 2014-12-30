@@ -104,6 +104,7 @@ aws iam put-user-policy --user-name $DEPLOY_USER --policy-name $DEPLOY_USER --po
         \"s3:DeleteObject\",
         \"s3:ListBucket\",
         \"s3:PutObject\",
+        \"s3:PutObjectAcl\",
         \"s3:GetObject\"
       ],
       \"Resource\": [
