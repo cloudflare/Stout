@@ -118,4 +118,4 @@ aws iam create-access-key --user-name $DEPLOY_USER | cat
 
 echo "Select a SSL Cert in CloudFront if applicable"
 
-echo "Site setup. You must now manually add the cloudfront distribution to your DNS configuration."
+echo "Site set up. You must now manually add the cloudfront distribution to your DNS configuration."
