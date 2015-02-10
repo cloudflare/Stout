@@ -453,95 +453,105 @@ func Deploy(options Options) {
 	files := listFiles(options)
 
 	htmlFileRefs := filesWithExtension(files, ".html")
+	var htmlFiles []HTMLFile
+	var id string
 
 	if len(htmlFileRefs) == 0 {
-		panic("Error: No HTML files found")
-	}
+		log.Println("No HTML files found")
+	} else {
+		inclFiles := make(map[string]*FileRef)
+		htmlFiles = make([]HTMLFile, len(htmlFileRefs))
+		for i, file := range htmlFileRefs {
+			dir := filepath.Dir(file.LocalPath)
 
-	inclFiles := make(map[string]*FileRef)
-	htmlFiles := make([]HTMLFile, len(htmlFileRefs))
-	for i, file := range htmlFileRefs {
-		dir := filepath.Dir(file.LocalPath)
+			rel, err := filepath.Rel(options.Root, dir)
+			if err != nil {
+				panic(err)
+			}
 
-		rel, err := filepath.Rel(options.Root, dir)
-		if err != nil {
-			panic(err)
-		}
+			paths, base := parseHTML(options, file.LocalPath)
 
-		paths, base := parseHTML(options, file.LocalPath)
+			if strings.HasPrefix(strings.ToLower(base), "http") || strings.HasPrefix(base, "//") {
+				panic("Absolute base tags are not supported")
+			}
 
-		if strings.HasPrefix(strings.ToLower(base), "http") || strings.HasPrefix(base, "//") {
-			panic("Absolute base tags are not supported")
-		}
+			htmlFiles[i] = HTMLFile{
+				File: *file,
+				Deps: make([]FileInst, len(paths)),
+				Base: base,
+			}
 
-		htmlFiles[i] = HTMLFile{
-			File: *file,
-			Deps: make([]FileInst, len(paths)),
-			Base: base,
-		}
+			for j, path := range paths {
+				local := filepath.Join(options.Root, rel, base, path)
+				remote := filepath.Join(options.Dest, rel, base, path)
 
-		for j, path := range paths {
-			local := filepath.Join(options.Root, rel, base, path)
-			remote := filepath.Join(options.Dest, rel, base, path)
+				ref, ok := inclFiles[local]
+				if !ok {
+					ref = &FileRef{
+						LocalPath:  local,
+						RemotePath: remote,
 
-			ref, ok := inclFiles[local]
-			if !ok {
-				ref = &FileRef{
-					LocalPath:  local,
-					RemotePath: remote,
+						// Filled in after the deploy:
+						UploadedPath: "",
+					}
 
-					// Filled in after the deploy:
-					UploadedPath: "",
+					inclFiles[local] = ref
 				}
 
-				inclFiles[local] = ref
-			}
+				use := FileInst{
+					File:     ref,
+					InstPath: path,
+				}
 
-			use := FileInst{
-				File:     ref,
-				InstPath: path,
+				htmlFiles[i].Deps[j] = use
 			}
-
-			htmlFiles[i].Deps[j] = use
 		}
+
+		inclFileList := make([]*FileRef, len(inclFiles))
+		i := 0
+		for _, ref := range inclFiles {
+			inclFileList[i] = ref
+			i++
+		}
+
+		hashPaths := make([]string, 0)
+		for _, item := range inclFileList {
+			hashPaths = append(hashPaths, item.LocalPath)
+		}
+		for _, item := range htmlFiles {
+			hashPaths = append(hashPaths, item.File.LocalPath)
+		}
+
+		hash := hashFiles(hashPaths)
+		id = hash[:12]
+
+		deployFiles(options, true, inclFileList)
 	}
 
-	inclFileList := make([]*FileRef, len(inclFiles))
-	i := 0
-	for _, ref := range inclFiles {
-		inclFileList[i] = ref
-		i++
-	}
-
-	hashPaths := make([]string, 0)
-	for _, item := range inclFileList {
-		hashPaths = append(hashPaths, item.LocalPath)
-	}
-	for _, item := range htmlFiles {
-		hashPaths = append(hashPaths, item.File.LocalPath)
-	}
-
-	hash := hashFiles(hashPaths)
-	id := hash[:12]
-
-	deployFiles(options, true, inclFileList)
 	deployFiles(options, false, ignoreFiles(files, htmlFileRefs))
 
-	// Ensure that the new files exist in s3
-	// Time based on "Eventual Consistency: How soon is eventual?"
-	time.Sleep(1500 * time.Millisecond)
+	if len(htmlFileRefs) != 0 {
+		// Ensure that the new files exist in s3
+		// Time based on "Eventual Consistency: How soon is eventual?"
+		time.Sleep(1500 * time.Millisecond)
 
-	wg := sync.WaitGroup{}
-	for _, file := range htmlFiles {
-		wg.Add(1)
+		wg := sync.WaitGroup{}
+		for _, file := range htmlFiles {
+			wg.Add(1)
 
-		go func(file HTMLFile) {
-			defer wg.Done()
-			deployHTML(options, id, file)
-		}(file)
+			go func(file HTMLFile) {
+				defer wg.Done()
+				deployHTML(options, id, file)
+			}(file)
+		}
+
+		wg.Wait()
 	}
 
-	wg.Wait()
+	visId := id
+	if id == "" {
+		visId = "0 HTML Files"
+	}
 
 	color.Printf(`
 +------------------------------------+
@@ -549,7 +559,7 @@ func Deploy(options Options) {
 |                                    |
 |       Deploy ID: @{?}%s@{|}      |
 +------------------------------------+
-`, id)
+`, visId)
 
 }
 
