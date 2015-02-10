@@ -1,8 +1,11 @@
 {
 	"ImportPath": "github.com/eagerio/stout",
-	"GoVersion": "go1.2.1",
+	"GoVersion": "go1.3.1",
 	"Packages": [
-		"./..."
+		"src/deploy.go",
+		"src/rollback.go",
+		"src/static.go",
+		"src/utils.go"
 	],
 	"Deps": [
 		{
