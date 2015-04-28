@@ -103,6 +103,7 @@ type Options struct {
 	AWSKey     string `yaml:"key"`
 	AWSSecret  string `yaml:"secret"`
 	AWSRegion  string `yaml:"region"`
+	NoUser     bool   `yaml:"-"`
 }
 
 func parseOptions() (o Options, set *flag.FlagSet) {
@@ -118,6 +119,7 @@ func parseOptions() (o Options, set *flag.FlagSet) {
 	set.StringVar(&o.AWSKey, "key", "", "The AWS key to use")
 	set.StringVar(&o.AWSSecret, "secret", "", "The AWS secret of the provided key")
 	set.StringVar(&o.AWSRegion, "region", "us-east-1", "The AWS region the S3 bucket is in")
+	set.BoolVar(&o.NoUser, "no-user", false, "When creating, should we make a user account?")
 
 	set.Parse(os.Args[2:])
 

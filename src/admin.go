@@ -152,6 +152,8 @@ func UpdateRoute(options Options, dist cloudfront.DistributionSummary) error {
 		return err
 	}
 
+	zoneName = zoneName + "."
+
 	resp, err := r53Session.ListHostedZonesByName(zoneName, "", 100)
 	if err != nil {
 		return err
@@ -170,7 +172,7 @@ func UpdateRoute(options Options, dist cloudfront.DistributionSummary) error {
 	}
 
 	if zone == nil {
-		fmt.Printf("A Route 53 hosted zone was not found for %s", zoneName)
+		fmt.Printf("A Route 53 hosted zone was not found for %s\n", zoneName)
 		if zoneName != options.Bucket {
 			fmt.Println("If you would like to use Route 53 to manage your DNS, create a zone for this domain, and update your registrar's configuration to point to the DNS servers Amazon provides and rerun this command.  Note that you must copy any existing DNS configuration you have to Route 53 if you do not wish existing services hosted on this domain to stop working.")
 			fmt.Printf("If you would like to continue to use your existing DNS, create a CNAME record pointing %s to %s and the site setup will be finished.", options.Bucket, dist.DomainName)
@@ -260,21 +262,22 @@ func Create(options Options) {
 		return
 	}
 
-	key, err := CreateUser(options)
+	if !options.NoUser {
+		key, err := CreateUser(options)
 
-	if err != nil {
-		fmt.Println("Error creating user")
-		fmt.Println(err)
-		return
-	}
+		if err != nil {
+			fmt.Println("Error creating user")
+			fmt.Println(err)
+			return
+		}
 
-	fmt.Println("An access key has been created with just the permissions required to deploy / rollback this site")
-	fmt.Println("It is strongly recommended you use this limited account to deploy this project in the future\n")
-	fmt.Printf("ACCESS_KEY_ID=%s\n", key.Id)
-	fmt.Printf("ACCESS_KEY_SECRET=%s\n\n", key.Secret)
+		fmt.Println("An access key has been created with just the permissions required to deploy / rollback this site")
+		fmt.Println("It is strongly recommended you use this limited account to deploy this project in the future\n")
+		fmt.Printf("ACCESS_KEY_ID=%s\n", key.Id)
+		fmt.Printf("ACCESS_KEY_SECRET=%s\n\n", key.Secret)
 
-	if terminal.IsTerminal(int(os.Stdin.Fd())) {
-		fmt.Println(`You can either add these credentials to the deploy.yaml file,
+		if terminal.IsTerminal(int(os.Stdin.Fd())) {
+			fmt.Println(`You can either add these credentials to the deploy.yaml file,
 or specify them as arguments to the stout deploy / stout rollback commands.
 You MUST NOT add them to the deploy.yaml file if this project is public
 (i.e. a public GitHub repo).
@@ -288,6 +291,8 @@ Your first deploy command might be:
 	
 	stout deploy --bucket ` + options.Bucket + ` --key ` + key.Id + ` --secret '` + key.Secret + `'
 `)
+		}
+
 	}
 
 	fmt.Println("You can begin deploying now, but it can take up to ten minutes for your site to begin to work")
