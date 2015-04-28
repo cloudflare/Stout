@@ -39,6 +39,8 @@ func main() {
 		deployCmd()
 	case "rollback":
 		rollbackCmd()
+	case "create":
+		createCmd()
 	default:
 		fmt.Println("Command not understood")
 		fmt.Println("")

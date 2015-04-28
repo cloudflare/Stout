@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
+	"strings"
 
 	"code.google.com/p/go.net/publicsuffix"
 	"github.com/zackbloom/goamz/cloudfront"
@@ -31,8 +31,7 @@ func CreateBucket(options Options) error {
 		return err
 	}
 
-	err = bucket.PutPolicy([]byte(`
-		{
+	err = bucket.PutPolicy([]byte(`{
 			"Version": "2008-10-17",
 			"Statement": [
 				{
@@ -61,8 +60,8 @@ func GetDistribution(options Options) (dist cloudfront.DistributionSummary, err 
 	}
 
 	if distP != nil {
-		log.Println("CloudFront distribution found with the provided bucket name, assuming config matches.")
-		log.Println("If you run into issues, delete the distribution and rerun this command.")
+		fmt.Println("CloudFront distribution found with the provided bucket name, assuming config matches.")
+		fmt.Println("If you run into issues, delete the distribution and rerun this command.")
 
 		dist = *distP
 		return
@@ -71,9 +70,13 @@ func GetDistribution(options Options) (dist cloudfront.DistributionSummary, err 
 	conf := cloudfront.DistributionConfig{
 		Origins: cloudfront.Origins{
 			cloudfront.Origin{
-				Id:             "S3-" + options.Bucket,
-				DomainName:     options.Bucket + ".s3-website-" + options.AWSRegion + ".amazonaws.com",
-				S3OriginConfig: &cloudfront.S3OriginConfig{},
+				Id:         "S3-" + options.Bucket,
+				DomainName: options.Bucket + ".s3-website-" + options.AWSRegion + ".amazonaws.com",
+				CustomOriginConfig: &cloudfront.CustomOriginConfig{
+					HTTPPort:             80,
+					HTTPSPort:            443,
+					OriginProtocolPolicy: "http-only",
+				},
 			},
 		},
 		DefaultRootObject: "index.html",
@@ -89,6 +92,8 @@ func GetDistribution(options Options) (dist cloudfront.DistributionSummary, err 
 		},
 		ViewerCertificate: &cloudfront.ViewerCertificate{
 			CloudFrontDefaultCertificate: true,
+			MinimumProtocolVersion:       "TLSv1",
+			SSLSupportMethod:             "sni-only",
 		},
 		Aliases: cloudfront.Aliases{
 			options.Bucket,
@@ -103,11 +108,15 @@ func CreateUser(options Options) (key iam.AccessKey, err error) {
 
 	_, err = iamSession.CreateUser(name, "/")
 	if err != nil {
-		return
+		iamErr, ok := err.(*iam.Error)
+		if ok && iamErr.Code == "EntityAlreadyExists" {
+			err = nil
+		} else {
+			return
+		}
 	}
 
-	_, err = iamSession.PutUserPolicy(name, name, `
-		{
+	_, err = iamSession.PutUserPolicy(name, name, `{
 			"Version": "2012-10-17",
 			"Statement": [
 				{
@@ -178,23 +187,31 @@ func UpdateRoute(options Options, dist cloudfront.DistributionSummary) error {
 
 	zone := resp.HostedZones[0]
 
-	fmt.Printf("Adding %s to %s Route 53 zone\n", options.Bucket, zoneName)
+	fmt.Printf("Adding %s to %s Route 53 zone\n", options.Bucket, zone.Name)
+	parts := strings.Split(zone.Id, "/")
+	idValue := parts[2]
+
 	_, err = r53Session.ChangeResourceRecordSet(&route53.ChangeResourceRecordSetsRequest{
 		Changes: []route53.Change{
 			route53.Change{
 				Action: "CREATE",
 				Name:   options.Bucket,
-				TTL:    3600,
+				Type:   "A",
 				AliasTarget: route53.AliasTarget{
-					HostedZoneId:         dist.Id,
+					HostedZoneId:         "Z2FDTNDATAQYW2",
 					DNSName:              dist.DomainName,
 					EvaluateTargetHealth: false,
 				},
 			},
 		},
-	}, zone.Id)
+	}, idValue)
 
 	if err != nil {
+		if strings.Contains(err.Error(), "it already exists") {
+			fmt.Println("Existing route found, assuming it is correct")
+			fmt.Printf("If you run into trouble, you may need to delete the %s route in Route53 and try again\n", options.Bucket)
+			return nil
+		}
 		return err
 	}
 
@@ -221,7 +238,7 @@ func Create(options Options) {
 		fmt.Println("Install it from http://aws.amazon.com/cli/ and try again")
 	}
 
-	log.Println("Creating Bucket")
+	fmt.Println("Creating Bucket")
 	err = CreateBucket(options)
 
 	if err != nil {
@@ -230,7 +247,7 @@ func Create(options Options) {
 		return
 	}
 
-	log.Println("Loading/Creating CloudFront Distribution")
+	fmt.Println("Loading/Creating CloudFront Distribution")
 	dist, err := GetDistribution(options)
 
 	if err != nil {
@@ -239,7 +256,7 @@ func Create(options Options) {
 		return
 	}
 
-	log.Println("Adding Route")
+	fmt.Println("Adding Route")
 	err = UpdateRoute(options, dist)
 
 	if err != nil {
@@ -250,31 +267,35 @@ func Create(options Options) {
 
 	key, err := CreateUser(options)
 
+	if err != nil {
+		fmt.Println("Error creating user")
+		fmt.Println(err)
+		return
+	}
+
 	fmt.Println("An access key has been created with just the permissions required to deploy / rollback this site")
-	fmt.Println("It is strongly recommended you use this limited account to deploy this project in the future")
+	fmt.Println("It is strongly recommended you use this limited account to deploy this project in the future\n")
 	fmt.Printf("ACCESS_KEY_ID=%s\n", key.Id)
-	fmt.Printf("ACCESS_KEY_SECRET=%s\n", key.Secret)
+	fmt.Printf("ACCESS_KEY_SECRET=%s\n\n", key.Secret)
 
 	if terminal.IsTerminal(int(os.Stdin.Fd())) {
 		fmt.Println(`You can either add these credentials to the deploy.yaml file,
-		or specify them as arguments to the stout deploy / stout rollback commands.
-		You MUST NOT add them to the deploy.yaml file if this project is public
-		(i.e. a public GitHub repo).
+or specify them as arguments to the stout deploy / stout rollback commands.
+You MUST NOT add them to the deploy.yaml file if this project is public
+(i.e. a public GitHub repo).
 
-		If you can't add them to the deploy.yaml file, you can specify them as
-		arguments on the command line.  If you use a build system like CircleCI, you
-		can add them as environment variables and pass those variables to the deploy
-		commands (see the README).
+If you can't add them to the deploy.yaml file, you can specify them as
+arguments on the command line.  If you use a build system like CircleCI, you
+can add them as environment variables and pass those variables to the deploy
+commands (see the README).
 
-		Your first deploy command might be:
-		  
-		  stout deploy --bucket ` + options.Bucket + ` --key ` + key.Id + ` --secret '` + key.Secret + `'
-
-		`)
+Your first deploy command might be:
+	
+	stout deploy --bucket ` + options.Bucket + ` --key ` + key.Id + ` --secret '` + key.Secret + `'
+`)
 	}
 
-	fmt.Printf("Site %s created", options.Bucket)
-	fmt.Println("You can begin deploying now (stout deploy), but it can take up to ten minutes for your site to begin to work")
+	fmt.Println("You can begin deploying now, but it can take up to ten minutes for your site to begin to work")
 	fmt.Println("Depending on the configuration of your site, you might need to set the 'root', 'dest' or 'files' options to get your deploys working as you wish.  See the README for details.")
 	fmt.Println("It's also a good idea to look into the 'env' option, as in real-world situations it usually makes sense to have a development and/or staging site for each of your production sites.")
 }
