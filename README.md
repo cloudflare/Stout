@@ -31,9 +31,14 @@ We built Stout to fix these issues.
 
 [Download](https://github.com/EagerIO/Stout/releases) the `stout` executable for your system from our latest release into a directory on your `$PATH`, like `/usr/local/bin`.
 
-If you don't already have a site, our [Creating a Site](https://github.com/EagerIO/Stout/blob/master/docs/getting-started.md) doc will help you get started.
+You can use the `create` command to create a new site.  It automatically creates an S3 bucket, a CloudFront distribution, and a user account for deployment.  It therefore requires
+credentials for an Amazon AWS account which has permissions to those services along with Route 53.
 
-If you already know how to setup a folder in S3 to be a static site, all you need to do is run the deploy command:
+```sh
+stout create --bucket my-bucket --key MY_AWS_KEY --secret MY_AWS_SECRET
+```
+
+You can then deploy your project:
 
 ```sh
 stout deploy --bucket my-bucket --key MY_AWS_KEY --secret MY_AWS_SECRET
