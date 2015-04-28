@@ -153,16 +153,23 @@ func UpdateRoute(options Options, dist cloudfront.DistributionSummary) error {
 	}
 
 	resp, err := r53Session.ListHostedZonesByName(zoneName, "", 100)
+	if err != nil {
+		return err
+	}
 
 	if resp.IsTruncated {
 		panic("More than 100 zones in the account")
 	}
 
-	// TODO: Figure out what happens when the zone isnt found
-	noZone := false
-	// END
+	var zone *route53.HostedZone
+	for _, z := range resp.HostedZones {
+		if z.Name == zoneName {
+			zone = &z
+			break
+		}
+	}
 
-	if noZone {
+	if zone == nil {
 		fmt.Printf("A Route 53 hosted zone was not found for %s", zoneName)
 		if zoneName != options.Bucket {
 			fmt.Println("If you would like to use Route 53 to manage your DNS, create a zone for this domain, and update your registrar's configuration to point to the DNS servers Amazon provides and rerun this command.  Note that you must copy any existing DNS configuration you have to Route 53 if you do not wish existing services hosted on this domain to stop working.")
@@ -171,20 +178,9 @@ func UpdateRoute(options Options, dist cloudfront.DistributionSummary) error {
 			fmt.Println("Since you are hosting the root of your domain, using an alternative DNS host is unfortunately not possible.")
 			fmt.Println("If you wish to host your site at the root of your domain, you must switch your sites DNS to Amazon's Route 53 and retry this command.")
 		}
-	}
 
-	if err != nil {
-		return err
+		return nil
 	}
-
-	if len(resp.HostedZones) > 1 {
-		panic("Multiple matching hosted zones found")
-	}
-	if len(resp.HostedZones) == 0 {
-		panic("Hosted zone not listed")
-	}
-
-	zone := resp.HostedZones[0]
 
 	fmt.Printf("Adding %s to %s Route 53 zone\n", options.Bucket, zone.Name)
 	parts := strings.Split(zone.Id, "/")
