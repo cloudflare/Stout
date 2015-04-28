@@ -18,7 +18,6 @@ func CreateBucket(options Options) error {
 	bucket := s3Session.Bucket(options.Bucket)
 
 	err := bucket.PutBucket("public-read")
-	// TODO Ignore found error
 	if err != nil {
 		return err
 	}
