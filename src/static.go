@@ -7,17 +7,21 @@ import (
 
 func printUsage() {
 	fmt.Println(`Stout Static Deploy Tool
-Supports two commands, deploy and rollback.
+Supports three commands, create, deploy and rollback.
 
 Example Usage:
 
-To deploy the current folder to the root of my-bucket:
+To create a site which will be hosted at my.awesome.website:
 
-stout deploy --bucket my-bucket --key AWS_KEY --secret AWS_SECRET
+stout create --bucket my.awesome.website --key AWS_KEY --secret AWS_SECRET
+
+To deploy the current folder to the root of the my.awesome.website site:
+
+stout deploy --bucket my.awesome.website --key AWS_KEY --secret AWS_SECRET
 
 To rollback to a specific deploy:
 
-stout rollback --bucket my-bucket --key AWS_KEY --secret AWS_SECRET c4a22bf94de1
+stout rollback --bucket my.awesome.website --key AWS_KEY --secret AWS_SECRET c4a22bf94de1
 
 See the README for more configuration information.
 `)

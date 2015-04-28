@@ -21,8 +21,8 @@ import (
 
 	"log"
 
-	"github.com/crowdmob/goamz/s3"
 	"github.com/wsxiaoys/terminal/color"
+	"github.com/zackbloom/goamz/s3"
 )
 
 const (
