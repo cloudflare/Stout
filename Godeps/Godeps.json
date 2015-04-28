@@ -2,9 +2,10 @@
 	"ImportPath": "github.com/eagerio/stout",
 	"GoVersion": "go1.3.1",
 	"Packages": [
+		"src/admin.go",
+		"src/cli.go",
 		"src/deploy.go",
 		"src/rollback.go",
-		"src/static.go",
 		"src/utils.go"
 	],
 	"Deps": [
@@ -14,12 +15,9 @@
 			"Rev": "6a58d15273e127ff2697fa5a848435af0ea1255d"
 		},
 		{
-			"ImportPath": "github.com/crowdmob/goamz/aws",
-			"Rev": "c5ba9ad45b6ac022326f0ff9762d6bac33ca8f88"
-		},
-		{
-			"ImportPath": "github.com/crowdmob/goamz/s3",
-			"Rev": "c5ba9ad45b6ac022326f0ff9762d6bac33ca8f88"
+			"ImportPath": "code.google.com/p/go.net/publicsuffix",
+			"Comment": "null-143",
+			"Rev": "6a58d15273e127ff2697fa5a848435af0ea1255d"
 		},
 		{
 			"ImportPath": "github.com/imdario/mergo",
@@ -29,6 +27,30 @@
 		{
 			"ImportPath": "github.com/wsxiaoys/terminal/color",
 			"Rev": "9dcaf1d63119a8ac00eef82270eaef08b6aa2328"
+		},
+		{
+			"ImportPath": "github.com/zackbloom/goamz/aws",
+			"Rev": "0f589c21f1937992b2952e1f4ce0d31f132b685d"
+		},
+		{
+			"ImportPath": "github.com/zackbloom/goamz/cloudfront",
+			"Rev": "0f589c21f1937992b2952e1f4ce0d31f132b685d"
+		},
+		{
+			"ImportPath": "github.com/zackbloom/goamz/iam",
+			"Rev": "0f589c21f1937992b2952e1f4ce0d31f132b685d"
+		},
+		{
+			"ImportPath": "github.com/zackbloom/goamz/route53",
+			"Rev": "0f589c21f1937992b2952e1f4ce0d31f132b685d"
+		},
+		{
+			"ImportPath": "github.com/zackbloom/goamz/s3",
+			"Rev": "0f589c21f1937992b2952e1f4ce0d31f132b685d"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/ssh/terminal",
+			"Rev": "1351f936d976c60a0a48d728281922cf63eafb8d"
 		},
 		{
 			"ImportPath": "gopkg.in/yaml.v1",

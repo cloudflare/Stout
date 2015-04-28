@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/crowdmob/goamz/s3"
+	"github.com/zackbloom/goamz/s3"
 )
 
 func Rollback(options Options, version string) {
