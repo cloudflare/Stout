@@ -51,7 +51,7 @@ type DistributionConfig struct {
 	Comment              string
 	CacheBehaviors       CacheBehaviors
 	CustomErrorResponses CustomErrorResponses
-	Restrictions         GeoRestriction `xml:"Restrictions>GeoRestriction"`
+	Restrictions         *GeoRestriction `xml:"Restrictions>GeoRestriction,omitempty"`
 	Logging              Logging
 	ViewerCertificate    *ViewerCertificate `xml:",omitempty"`
 	PriceClass           string
@@ -59,6 +59,7 @@ type DistributionConfig struct {
 }
 
 type DistributionSummary struct {
+	XMLName xml.Name `xml:"Distribution"`
 	DistributionConfig
 	DomainName       string
 	Status           string
@@ -82,6 +83,17 @@ func (a Aliases) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	return e.EncodeElement(enc, start)
 }
 
+func (n *Aliases) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	enc := EncodedAliases{}
+	err := d.DecodeElement(&enc, &start)
+	if err != nil {
+		return err
+	}
+
+	*n = enc.Items
+	return nil
+}
+
 type CustomErrorResponses []CustomErrorResponse
 
 type EncodedCustomErrorResponses struct {
@@ -98,6 +110,17 @@ func (a CustomErrorResponses) MarshalXML(e *xml.Encoder, start xml.StartElement)
 	return e.EncodeElement(enc, start)
 }
 
+func (n *CustomErrorResponses) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	enc := EncodedCustomErrorResponses{}
+	err := d.DecodeElement(&enc, &start)
+	if err != nil {
+		return err
+	}
+
+	*n = enc.Items
+	return nil
+}
+
 type CacheBehaviors []CacheBehavior
 
 type EncodedCacheBehaviors struct {
@@ -112,6 +135,17 @@ func (a CacheBehaviors) MarshalXML(e *xml.Encoder, start xml.StartElement) error
 	}
 
 	return e.EncodeElement(enc, start)
+}
+
+func (n *CacheBehaviors) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	enc := EncodedCacheBehaviors{}
+	err := d.DecodeElement(&enc, &start)
+	if err != nil {
+		return err
+	}
+
+	*n = enc.Items
+	return nil
 }
 
 type Logging struct {
@@ -147,6 +181,18 @@ func (a GeoRestriction) MarshalXML(e *xml.Encoder, start xml.StartElement) error
 	}
 
 	return e.EncodeElement(enc, start)
+}
+
+func (n *GeoRestriction) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	enc := EncodedGeoRestriction{}
+	err := d.DecodeElement(&enc, &start)
+	if err != nil {
+		return err
+	}
+
+	n.Locations = enc.Locations
+	n.RestrictionType = enc.RestrictionType
+	return nil
 }
 
 type CustomErrorResponse struct {
@@ -192,6 +238,17 @@ func (o Origins) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	return e.EncodeElement(enc, start)
 }
 
+func (o *Origins) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	enc := EncodedOrigins{}
+	err := d.DecodeElement(&enc, &start)
+	if err != nil {
+		return err
+	}
+
+	*o = Origins(enc.Items)
+	return nil
+}
+
 type CacheBehavior struct {
 	TargetOriginId       string
 	PathPattern          string `xml:",omitempty"`
@@ -205,13 +262,25 @@ type CacheBehavior struct {
 
 type ForwardedValues struct {
 	QueryString bool
-	Cookies     Cookies
+	Cookies     *Cookies
 	Headers     Names
 }
 
 type Cookies struct {
 	Forward          string
 	WhitelistedNames Names
+}
+
+var CookiesDefault = Cookies{
+	Forward:          "none",
+	WhitelistedNames: Names{},
+}
+
+func cacheBehaviorDefault(cache *CacheBehavior) {
+	if cache.ForwardedValues.Cookies == nil {
+		clone := CookiesDefault
+		cache.ForwardedValues.Cookies = &clone
+	}
 }
 
 type Names []string
@@ -228,6 +297,17 @@ func (w Names) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	}
 
 	return e.EncodeElement(enc, start)
+}
+
+func (n *Names) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	enc := EncodedNames{}
+	err := d.DecodeElement(&enc, &start)
+	if err != nil {
+		return err
+	}
+
+	*n = Names(enc.Items)
+	return nil
 }
 
 type ItemsList []string
@@ -253,6 +333,18 @@ func (n TrustedSigners) MarshalXML(e *xml.Encoder, start xml.StartElement) error
 	return e.EncodeElement(enc, start)
 }
 
+func (n *TrustedSigners) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	enc := EncodedTrustedSigners{}
+	err := d.DecodeElement(&enc, &start)
+	if err != nil {
+		return err
+	}
+
+	n.AWSAccountNumbers = enc.Items
+	n.Enabled = enc.Enabled
+	return nil
+}
+
 type AllowedMethods struct {
 	Allowed []string `xml:"Items"`
 	Cached  []string `xml:"CachedMethods>Items,omitempty"`
@@ -274,6 +366,18 @@ func (n AllowedMethods) MarshalXML(e *xml.Encoder, start xml.StartElement) error
 	}
 
 	return e.EncodeElement(enc, start)
+}
+
+func (n *AllowedMethods) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	enc := EncodedAllowedMethods{}
+	err := d.DecodeElement(&enc, &start)
+	if err != nil {
+		return err
+	}
+
+	n.Allowed = enc.Allowed
+	n.Cached = enc.Cached
+	return nil
 }
 
 var base64Replacer = strings.NewReplacer("=", "_", "+", "-", "/", "~")
@@ -408,7 +512,7 @@ func (cf *CloudFront) generateSignature(policy []byte) (string, error) {
 //		PriceClass: "PriceClass_All",
 //	}
 //
-//	cf, _ := cloudfront.NewCloudFront(aws.Auth{
+//	cf := cloudfront.NewCloudFront(aws.Auth{
 //		AccessKey: // ...
 //		SecretKey: // ...
 //	})
@@ -416,6 +520,11 @@ func (cf *CloudFront) generateSignature(policy []byte) (string, error) {
 func (cf *CloudFront) Create(config DistributionConfig) (summary DistributionSummary, err error) {
 	if config.CallerReference == "" {
 		config.CallerReference = strconv.FormatInt(time.Now().Unix(), 10)
+	}
+
+	cacheBehaviorDefault(&config.DefaultCacheBehavior)
+	for i, _ := range config.CacheBehaviors {
+		cacheBehaviorDefault(&(config.CacheBehaviors[i]))
 	}
 
 	body, err := xml.Marshal(config)
@@ -455,8 +564,13 @@ func (cf *CloudFront) Create(config DistributionConfig) (summary DistributionSum
 	return
 }
 
+type DistributionItem struct {
+	XMLName xml.Name `xml:"DistributionSummary"`
+	DistributionSummary
+}
+
 type DistributionsResp struct {
-	Items       []DistributionSummary `xml:"Items>DistributionSummary"`
+	Items       []DistributionItem `xml:"Items>DistributionSummary"`
 	IsTruncated bool
 	Marker      string
 
@@ -507,6 +621,7 @@ func (cf *CloudFront) List(marker string, max int) (items *DistributionsResp, er
 		}
 		err = &errors.Errors
 	} else {
+		items = &DistributionsResp{}
 		err = xml.NewDecoder(resp.Body).Decode(items)
 	}
 
@@ -526,11 +641,11 @@ func (cf *CloudFront) FindDistributionByAlias(alias string) (dist *DistributionS
 			panic("More than 1000 CloudFront distributions in account, not all will be correctly searched")
 		}
 
-		var item DistributionSummary
+		var item DistributionItem
 		for _, item = range resp.Items {
 			for _, _alias := range item.Aliases {
 				if _alias == alias {
-					dist = &item
+					dist = &(item.DistributionSummary)
 					return
 				}
 			}

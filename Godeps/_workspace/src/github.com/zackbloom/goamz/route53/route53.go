@@ -20,6 +20,7 @@ type Route53 struct {
 }
 
 const route53_host = "https://route53.amazonaws.com"
+const route53_ver = "2013-04-01"
 
 // Factory for the route53 type
 func NewRoute53(auth aws.Auth) (*Route53, error) {
@@ -28,7 +29,7 @@ func NewRoute53(auth aws.Auth) (*Route53, error) {
 	return &Route53{
 		Auth:     auth,
 		Signer:   signer,
-		Endpoint: route53_host + "/2013-04-01/hostedzone",
+		Endpoint: route53_host + "/" + route53_ver + "/hostedzone",
 	}, nil
 }
 
@@ -60,7 +61,7 @@ type ListHostedZonesResponse struct {
 }
 
 type ListHostedZonesByNameResponse struct {
-	XMLName          xml.Name     `xml:"ListHostedZonesByNameResponse"`
+	XMLName          xml.Name     `xml:"ListHostedZonesResponse"`
 	HostedZones      []HostedZone `xml:"HostedZones>HostedZone"`
 	DNSName          string
 	HostedZoneId     string
@@ -303,6 +304,8 @@ func (recordset *ResourceRecordSet) GetValues() []string {
 
 // ChangeResourceRecordSet send a change resource record request to the AWS Route53 API
 func (r *Route53) ChangeResourceRecordSet(req *ChangeResourceRecordSetsRequest, zoneId string) (*ChangeResourceRecordSetsResponse, error) {
+	req.Xmlns = "https://route53.amazonaws.com/doc/" + route53_ver + "/"
+
 	xmlBytes, err := xml.Marshal(req)
 	if err != nil {
 		return nil, err

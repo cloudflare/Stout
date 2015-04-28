@@ -3,9 +3,9 @@
 	"GoVersion": "go1.3.1",
 	"Packages": [
 		"src/admin.go",
+		"src/cli.go",
 		"src/deploy.go",
 		"src/rollback.go",
-		"src/static.go",
 		"src/utils.go"
 	],
 	"Deps": [
@@ -30,23 +30,23 @@
 		},
 		{
 			"ImportPath": "github.com/zackbloom/goamz/aws",
-			"Rev": "53f65a3e0931839d2aee9a6e5b7296cbc7fbf344"
+			"Rev": "0f589c21f1937992b2952e1f4ce0d31f132b685d"
 		},
 		{
 			"ImportPath": "github.com/zackbloom/goamz/cloudfront",
-			"Rev": "53f65a3e0931839d2aee9a6e5b7296cbc7fbf344"
+			"Rev": "0f589c21f1937992b2952e1f4ce0d31f132b685d"
 		},
 		{
 			"ImportPath": "github.com/zackbloom/goamz/iam",
-			"Rev": "53f65a3e0931839d2aee9a6e5b7296cbc7fbf344"
+			"Rev": "0f589c21f1937992b2952e1f4ce0d31f132b685d"
 		},
 		{
 			"ImportPath": "github.com/zackbloom/goamz/route53",
-			"Rev": "53f65a3e0931839d2aee9a6e5b7296cbc7fbf344"
+			"Rev": "0f589c21f1937992b2952e1f4ce0d31f132b685d"
 		},
 		{
 			"ImportPath": "github.com/zackbloom/goamz/s3",
-			"Rev": "53f65a3e0931839d2aee9a6e5b7296cbc7fbf344"
+			"Rev": "0f589c21f1937992b2952e1f4ce0d31f132b685d"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/ssh/terminal",
