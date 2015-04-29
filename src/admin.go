@@ -94,6 +94,21 @@ func GetDistribution(options Options) (dist cloudfront.DistributionSummary, err 
 			MinimumProtocolVersion:       "TLSv1",
 			SSLSupportMethod:             "sni-only",
 		},
+		CustomErrorResponses: cloudfront.CustomErrorResponses{
+			// This adds support for single-page apps
+			cloudfront.CustomErrorResponse{
+				ErrorCode:          403,
+				ResponsePagePath:   "/index.html",
+				ResponseCode:       200,
+				ErrorCachingMinTTL: 60,
+			},
+			cloudfront.CustomErrorResponse{
+				ErrorCode:          404,
+				ResponsePagePath:   "/index.html",
+				ResponseCode:       200,
+				ErrorCachingMinTTL: 60,
+			},
+		},
 		Aliases: cloudfront.Aliases{
 			options.Bucket,
 		},
