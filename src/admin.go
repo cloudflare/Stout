@@ -175,7 +175,7 @@ func UpdateRoute(options Options, dist cloudfront.DistributionSummary) error {
 		fmt.Printf("A Route 53 hosted zone was not found for %s\n", zoneName)
 		if zoneName != options.Bucket {
 			fmt.Println("If you would like to use Route 53 to manage your DNS, create a zone for this domain, and update your registrar's configuration to point to the DNS servers Amazon provides and rerun this command.  Note that you must copy any existing DNS configuration you have to Route 53 if you do not wish existing services hosted on this domain to stop working.")
-			fmt.Printf("If you would like to continue to use your existing DNS, create a CNAME record pointing %s to %s and the site setup will be finished.", options.Bucket, dist.DomainName)
+			fmt.Printf("If you would like to continue to use your existing DNS, create a CNAME record pointing %s to %s and the site setup will be finished.\n", options.Bucket, dist.DomainName)
 		} else {
 			fmt.Println("Since you are hosting the root of your domain, using an alternative DNS host is unfortunately not possible.")
 			fmt.Println("If you wish to host your site at the root of your domain, you must switch your sites DNS to Amazon's Route 53 and retry this command.")
