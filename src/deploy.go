@@ -32,6 +32,12 @@ const (
 
 const UPLOAD_WORKERS = 20
 
+var NO_GZIP = []string{
+	"mp4",
+	"webm",
+	"ogg",
+}
+
 func hashFile(path string) []byte {
 	hash := md5.New()
 	io.WriteString(hash, path)
@@ -81,20 +87,41 @@ func guessContentType(file string) string {
 	return mime.TypeByExtension(filepath.Ext(file))
 }
 
+func shouldCompress(file string) bool {
+	ext := filepath.Ext(file)
+	for _, e := range NO_GZIP {
+		if "."+e == ext {
+			return false
+		}
+	}
+
+	return true
+}
+
 func uploadFile(bucket *s3.Bucket, reader io.Reader, dest string, includeHash bool, caching int) string {
 	buffer := bytes.NewBuffer([]byte{})
-	writer := gzip.NewWriter(buffer)
-	must(io.Copy(writer, reader))
-	writer.Close()
+
+	compress := shouldCompress(dest)
+
+	if compress {
+		writer := gzip.NewWriter(buffer)
+		must(io.Copy(writer, reader))
+		writer.Close()
+	} else {
+		must(io.Copy(buffer, reader))
+	}
 
 	data := buffer.Bytes()
 
 	hash := hashBytes(data)
 	hashPrefix := fmt.Sprintf("%x", hash)[:12]
 	s3Opts := s3.Options{
-		ContentMD5:      base64.StdEncoding.EncodeToString(hash),
-		ContentEncoding: "gzip",
-		CacheControl:    fmt.Sprintf("public, max-age=%d", caching),
+		ContentMD5:   base64.StdEncoding.EncodeToString(hash),
+		CacheControl: fmt.Sprintf("public, max-age=%d", caching),
+	}
+
+	if compress {
+		s3Opts.ContentEncoding = "gzip"
 	}
 
 	if includeHash {
