@@ -95,7 +95,7 @@ You can configure the deploy tool with any combination of command line flags or 
 The options are:
 
 ##### `bucket`
-  The S3 bucket to deploy to.  In most configurations this bucket should be the origin for the CDN which actually serves your site.
+  The S3 bucket to deploy to.  In most configurations this bucket should be the origin for the CDN which actually serves your site.  It usually makes sense to make this the url you are going to host your site from (i.e. `"example.com"`)
   	
 ##### `config` ("./deploy.yaml")
   The location of a yaml file to read any otherwise unspecified configuration from.
