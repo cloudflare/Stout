@@ -35,25 +35,25 @@ You can use the `create` command to create a new site.  It automatically creates
 credentials for an Amazon AWS account which has permissions to those services along with Route 53.
 
 ```sh
-stout create --bucket my-bucket --key MY_AWS_KEY --secret MY_AWS_SECRET
+stout create --bucket my.website.com --key MY_AWS_KEY --secret MY_AWS_SECRET
 ```
 
 You can then deploy your project:
 
 ```sh
-stout deploy --bucket my-bucket --key MY_AWS_KEY --secret MY_AWS_SECRET
+stout deploy --bucket my.website.com --key MY_AWS_KEY --secret MY_AWS_SECRET
 ```
 
 If your built files are in another directory, add the `--root` option:
 
 ```sh
-stout deploy --bucket my-bucket --key MY_AWS_KEY --secret MY_AWS_SECRET --root ./build
+stout deploy --bucket my.website.com --key MY_AWS_KEY --secret MY_AWS_SECRET --root ./build
 ```
 
 If you don't want to deploy all the files in your folder, use the files argument.
 
 ```sh
-stout deploy --bucket my-bucket --key MY_AWS_KEY --secret MY_AWS_SECRET --root ./build --files "*.html,images/*"
+stout deploy --bucket my.website.com --key MY_AWS_KEY --secret MY_AWS_SECRET --root ./build --files "*.html,images/*"
 ```
 
 Javascript and CSS included in your HTML files will always be included automatically.
@@ -61,7 +61,7 @@ Javascript and CSS included in your HTML files will always be included automatic
 The deploy command will give you a deploy id you can use in the future to rollback if you have to:
 
 ```sh
-stout rollback --bucket my-bucket --key MY_AWS_KEY --secret MY_AWS_SECRET a3b8ff290c33
+stout rollback --bucket my.website.com --key MY_AWS_KEY --secret MY_AWS_SECRET a3b8ff290c33
 ```
 
 Eventually you'll probably want to move your config to a deploy.yaml file, rather than specifying it in the command every time.
