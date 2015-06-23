@@ -509,8 +509,14 @@ func Deploy(options Options) {
 			}
 
 			for j, path := range paths {
-				local := filepath.Join(options.Root, rel, base, path)
-				remote := filepath.Join(options.Dest, rel, base, path)
+				var local, remote string
+				if strings.HasPrefix(path, "/") {
+					local = filepath.Join(options.Root, base, path)
+					remote = filepath.Join(options.Dest, base, path)
+				} else {
+					local = filepath.Join(options.Root, rel, base, path)
+					remote = filepath.Join(options.Dest, rel, base, path)
+				}
 
 				ref, ok := inclFiles[local]
 				if !ok {
