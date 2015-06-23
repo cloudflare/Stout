@@ -25,8 +25,16 @@
 			"Rev": "e1856b2128eb93453caf1f21d4f1d9926ebeb593"
 		},
 		{
+			"ImportPath": "github.com/mitchellh/go-homedir",
+			"Rev": "1f6da4a72e57d4e7edd4a7295a585e0a3999a2d4"
+		},
+		{
 			"ImportPath": "github.com/wsxiaoys/terminal/color",
 			"Rev": "9dcaf1d63119a8ac00eef82270eaef08b6aa2328"
+		},
+		{
+			"ImportPath": "github.com/zackbloom/go-ini",
+			"Rev": "3db81f263990ac57212cfdc3ce9a65e8af8af966"
 		},
 		{
 			"ImportPath": "github.com/zackbloom/goamz/aws",

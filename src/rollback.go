@@ -66,6 +66,7 @@ func rollbackCmd() {
 	version := set.Arg(0)
 
 	loadConfigFile(&options)
+	addAWSConfig(&options)
 
 	if options.Bucket == "" {
 		panic("You must specify a bucket")

@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 
 	"github.com/imdario/mergo"
+	"github.com/mitchellh/go-homedir"
+	"github.com/zackbloom/go-ini"
 	"github.com/zackbloom/goamz/aws"
 	"github.com/zackbloom/goamz/cloudfront"
 	"github.com/zackbloom/goamz/iam"
@@ -162,6 +164,37 @@ func loadConfigFile(o *Options) {
 
 	panicIf(mergo.Merge(o, defCfg))
 	panicIf(mergo.Merge(o, envCfg))
+}
+
+func addAWSConfig(o *Options) {
+	if o.AWSKey == "" && o.AWSSecret == "" {
+		o.AWSKey, o.AWSSecret = loadAWSConfig()
+	}
+}
+
+type AWSConfig struct {
+	Default struct {
+		AccessKey string `ini:"aws_access_key_id"`
+		SecretKey string `ini:"aws_secret_access_key"`
+	} `ini:"[default]"`
+}
+
+func loadAWSConfig() (access string, secret string) {
+	cfg := AWSConfig{}
+
+	path, err := homedir.Expand("~/.aws/config")
+	if err != nil {
+		return
+	}
+
+	content, err := ioutil.ReadFile(path)
+	if err != nil {
+		return
+	}
+
+	ini.Unmarshal(content, &cfg)
+
+	return cfg.Default.AccessKey, cfg.Default.SecretKey
 }
 
 func copyFile(bucket *s3.Bucket, from string, to string, contentType string, maxAge int) {

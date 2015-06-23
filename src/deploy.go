@@ -593,6 +593,7 @@ func Deploy(options Options) {
 func deployCmd() {
 	options, _ := parseOptions()
 	loadConfigFile(&options)
+	addAWSConfig(&options)
 
 	if options.Bucket == "" {
 		panic("You must specify a bucket")
