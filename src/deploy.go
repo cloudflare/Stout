@@ -518,6 +518,10 @@ func Deploy(options Options) {
 					remote = filepath.Join(options.Dest, rel, base, path)
 				}
 
+				for strings.HasPrefix(remote, "../") {
+					remote = remote[3:]
+				}
+
 				ref, ok := inclFiles[local]
 				if !ok {
 					ref = &FileRef{
