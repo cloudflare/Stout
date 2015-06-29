@@ -370,7 +370,13 @@ func expandFiles(root string, glob string) []string {
 	cases := strings.Split(glob, ",")
 
 	for _, pattern := range cases {
-		list := must(filepath.Glob(filepath.Join(root, pattern))).([]string)
+		if strings.HasPrefix(pattern, "/") {
+			pattern = pattern[1:]
+		} else {
+			pattern = filepath.Join(root, pattern)
+		}
+
+		list := must(filepath.Glob(pattern)).([]string)
 
 		for _, file := range list {
 			info := must(os.Stat(file)).(os.FileInfo)
@@ -399,6 +405,10 @@ func listFiles(options Options) []*FileRef {
 	files := make([]*FileRef, len(filePaths))
 	for i, path := range filePaths {
 		remotePath := filepath.Join(options.Dest, mustString(filepath.Rel(options.Root, path)))
+
+		for strings.HasPrefix(remotePath, "../") {
+			remotePath = remotePath[3:]
+		}
 
 		files[i] = &FileRef{
 			LocalPath:  path,
