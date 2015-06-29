@@ -111,7 +111,7 @@ The options are:
   
   Be sure to include any additional files you would like deployed like images, videos, font files, etc.
 
-  You can use relative paths which break out of the `root`.  If you prefix the path with `/`, it will be interpreted as relative to the project directory, not the `root`.
+  You can use relative paths which break out of the `root`.  If you prefix the path with `-/`, it will be interpreted as relative to the project directory, not the `root`.
   	
 ##### `env`
   The config file can contain configurations for multiple environments (production, staging, etc.).  This specifies which is used.  See the "YAML Config" section for more information.

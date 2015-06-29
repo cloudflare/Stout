@@ -370,8 +370,8 @@ func expandFiles(root string, glob string) []string {
 	cases := strings.Split(glob, ",")
 
 	for _, pattern := range cases {
-		if strings.HasPrefix(pattern, "/") {
-			pattern = pattern[1:]
+		if strings.HasPrefix(pattern, "-/") {
+			pattern = pattern[2:]
 		} else {
 			pattern = filepath.Join(root, pattern)
 		}
