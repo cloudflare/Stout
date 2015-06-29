@@ -110,6 +110,8 @@ The options are:
   Comma-seperated glob patterns of the files to be deployed (within the `--root`).  HTML files will be parsed, and the CSS/JS they point to will be included (versioned) automatically.  If you also include those files in your glob pattern they will be uploaded twice, once with a versioning hash in the URL, again without.
   
   Be sure to include any additional files you would like deployed like images, videos, font files, etc.
+
+  You can use relative paths which break out of the `root`.  If you prefix the path with `/`, it will be interpreted as relative to the project directory, not the `root`.
   	
 ##### `env`
   The config file can contain configurations for multiple environments (production, staging, etc.).  This specifies which is used.  See the "YAML Config" section for more information.
