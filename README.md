@@ -1,6 +1,6 @@
 # Stout
 
-#### [View the site](http://stout.is/)
+#### [View the site →](http://stout.is/)
 
 Stout is a deploy tool for static websites.  It takes a website and uploads it to S3 in a more reliable way than other tools.  It can be an alternative
 to paid services like Divshot, to dynamic web servers like Rails, or to manually uploading your site to S3 or an FTP server.
