@@ -186,9 +186,21 @@ blog/
 
 That way, assuming S3 and CloudFront are configured properly, you'll be able to use the clean URLs `/` and `/blog/`.
 
+### SSL
+
+Cloudfront has the ability to serve your site using SSL.  The general procedure for setting it up is:
+
+1. Get an SSL certificate for your domain
+2. Upload it to Amazon
+3. Select that certificate in the configuration for the CloudFront distribution Stout creates for you
+
+You will absolutely need more detailed instructions, which you can find [here](https://bryce.fisher-fleig.org/blog/setting-up-ssl-on-aws-cloudfront-and-s3/).
+
+Selecting a certificate for you is one of the few things the `create` command does not do, as it's not always possible to decide which certificate is appropriate.  If you need SSL support, you will have to remember to select the cert in the Amazon Console or CLI after running the `create` command.
+
 ### Permissions
 
-The AWS user which is used for Stout should have the `GetObject`, `PutObject`, `DeleteObject`, and `ListBucket` permissions.  The `utils/create_site.sh` script will set this up for you if you use it to create your site.
+The AWS user which is used for Stout should have the `GetObject`, `PutObject`, `DeleteObject`, and `ListBucket` permissions.  The `create` command will set this up for you if you use it.
 
 This is an example policy config which works:
 
