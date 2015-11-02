@@ -142,7 +142,7 @@ production:
   secret: 'XXX'
   bucket: 'eager.io'
 
-dev:
+development:
   key: 'XXX'
   secret: 'XXX'
   bucket: 'next.eager.io'
