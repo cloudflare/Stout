@@ -521,8 +521,8 @@ func Deploy(options Options) {
 			for j, path := range paths {
 				var local, remote string
 				if strings.HasPrefix(path, "/") {
-					local = filepath.Join(options.Root, base, path)
-					remote = filepath.Join(options.Dest, base, path)
+					local = filepath.Join(options.Root, path)
+					remote = filepath.Join(options.Dest, path)
 				} else {
 					local = filepath.Join(options.Root, rel, base, path)
 					remote = filepath.Join(options.Dest, rel, base, path)
