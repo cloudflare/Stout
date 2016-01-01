@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -209,7 +208,7 @@ func copyFile(bucket *s3.Bucket, from string, to string, contentType string, max
 		},
 	}
 
-	_, err := bucket.PutCopy(to, s3.PublicRead, copyOpts, filepath.Join(bucket.Name, from))
+	_, err := bucket.PutCopy(to, s3.PublicRead, copyOpts, joinPath(bucket.Name, from))
 	if err != nil {
 		panic(err)
 	}
