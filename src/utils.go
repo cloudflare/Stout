@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -218,5 +219,11 @@ var pathRe = regexp.MustCompile("/{2,}")
 
 func joinPath(parts ...string) string {
 	// Like filepath.Join, but always uses '/'
-	return pathRe.ReplaceAllLiteralString(strings.Join(parts, "/"), "/")
+	out := filepath.Join(parts...)
+
+	if os.PathSeparator != '/' {
+		out = strings.Replace(out, string(os.PathSeparator), "/", -1)
+	}
+
+	return out
 }
