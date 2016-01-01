@@ -125,7 +125,7 @@ func uploadFile(bucket *s3.Bucket, reader io.Reader, dest string, includeHash bo
 	}
 
 	if includeHash {
-		dest = filepath.Join(hashPrefix, dest)
+		dest = joinPath(hashPrefix, dest)
 	}
 
 	log.Printf("Uploading to %s in %s (%s) [%d]\n", dest, bucket.Name, hashPrefix, caching)
@@ -355,8 +355,8 @@ func deployHTML(options Options, id string, file HTMLFile) {
 		panic(err)
 	}
 
-	permPath := filepath.Join(options.Dest, id, internalPath)
-	curPath := filepath.Join(options.Dest, internalPath)
+	permPath := joinPath(options.Dest, id, internalPath)
+	curPath := joinPath(options.Dest, internalPath)
 
 	bucket := s3Session.Bucket(options.Bucket)
 	uploadFile(bucket, strings.NewReader(data), permPath, false, FOREVER)
@@ -373,7 +373,7 @@ func expandFiles(root string, glob string) []string {
 		if strings.HasPrefix(pattern, "-/") {
 			pattern = pattern[2:]
 		} else {
-			pattern = filepath.Join(root, pattern)
+			pattern = joinPath(root, pattern)
 		}
 
 		list := must(filepath.Glob(pattern)).([]string)
@@ -404,7 +404,7 @@ func listFiles(options Options) []*FileRef {
 
 	files := make([]*FileRef, len(filePaths))
 	for i, path := range filePaths {
-		remotePath := filepath.Join(options.Dest, mustString(filepath.Rel(options.Root, path)))
+		remotePath := joinPath(options.Dest, mustString(filepath.Rel(options.Root, path)))
 
 		for strings.HasPrefix(remotePath, "../") {
 			remotePath = remotePath[3:]
@@ -447,7 +447,7 @@ func extractFileList(options Options, pattern string) (files []string) {
 	parts := strings.Split(pattern, ",")
 
 	for _, part := range parts {
-		matches, err := filepath.Glob(filepath.Join(options.Root, part))
+		matches, err := filepath.Glob(joinPath(options.Root, part))
 		if err != nil {
 			panic(err)
 		}
@@ -521,11 +521,11 @@ func Deploy(options Options) {
 			for j, path := range paths {
 				var local, remote string
 				if strings.HasPrefix(path, "/") {
-					local = filepath.Join(options.Root, path)
-					remote = filepath.Join(options.Dest, path)
+					local = joinPath(options.Root, path)
+					remote = joinPath(options.Dest, path)
 				} else {
-					local = filepath.Join(options.Root, rel, base, path)
-					remote = filepath.Join(options.Dest, rel, base, path)
+					local = joinPath(options.Root, rel, base, path)
+					remote = joinPath(options.Dest, rel, base, path)
 				}
 
 				for strings.HasPrefix(remote, "../") {

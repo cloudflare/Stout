@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"github.com/imdario/mergo"
 	"github.com/mitchellh/go-homedir"
@@ -207,8 +209,21 @@ func copyFile(bucket *s3.Bucket, from string, to string, contentType string, max
 		},
 	}
 
-	_, err := bucket.PutCopy(to, s3.PublicRead, copyOpts, filepath.Join(bucket.Name, from))
+	_, err := bucket.PutCopy(to, s3.PublicRead, copyOpts, joinPath(bucket.Name, from))
 	if err != nil {
 		panic(err)
 	}
+}
+
+var pathRe = regexp.MustCompile("/{2,}")
+
+func joinPath(parts ...string) string {
+	// Like filepath.Join, but always uses '/'
+	out := filepath.Join(parts...)
+
+	if os.PathSeparator != '/' {
+		out = strings.Replace(out, string(os.PathSeparator), "/", -1)
+	}
+
+	return out
 }
