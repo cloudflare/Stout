@@ -129,7 +129,7 @@ func uploadFile(bucket *s3.Bucket, reader io.Reader, dest string, includeHash bo
 	}
 
 	log.Printf("Uploading to %s in %s (%s) [%d]\n", dest, bucket.Name, hashPrefix, caching)
-	err := bucket.PutReader(dest, buffer, int64(len(data)), guessContentType(dest), s3.PublicRead, s3Opts)
+	err := bucket.PutReader(dest, buffer, int64(len(data)), guessContentType(dest)+"; charset=utf-8", s3.PublicRead, s3Opts)
 	panicIf(err)
 
 	return dest
@@ -362,7 +362,7 @@ func deployHTML(options Options, id string, file HTMLFile) {
 	uploadFile(bucket, strings.NewReader(data), permPath, false, FOREVER)
 
 	log.Println("Copying", permPath, "to", curPath)
-	copyFile(bucket, permPath, curPath, "text/html", LIMITED)
+	copyFile(bucket, permPath, curPath, "text/html; charset=utf-8", LIMITED)
 }
 
 func expandFiles(root string, glob string) []string {
