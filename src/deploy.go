@@ -125,7 +125,7 @@ func uploadFile(bucket *s3.Bucket, reader io.Reader, dest string, includeHash bo
 	}
 
 	if includeHash {
-		dest = joinPath(hashPrefix, dest)
+		dest = hashPrefix + "_" + dest
 	}
 
 	log.Printf("Uploading to %s in %s (%s) [%d]\n", dest, bucket.Name, hashPrefix, caching)
