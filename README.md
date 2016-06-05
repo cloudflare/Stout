@@ -52,6 +52,12 @@ If your built files are in another directory, add the `--root` option:
 stout deploy --bucket my.website.com --key MY_AWS_KEY --secret MY_AWS_SECRET --root ./build
 ```
 
+If your bucket located not in the default region, which is us-east-1, add the `--region` option:
+
+```sh
+stout deploy --bucket my.website.com --key MY_AWS_KEY --secret MY_AWS_SECRET --region us-west-1
+```
+
 If you don't want to deploy all the files in your folder, use the files argument.
 
 ```sh
@@ -125,7 +131,7 @@ The options are:
   The AWS secret of the provided key.
 
 ##### `region` ("us-east-1")
-  The AWS region the S3 bucket is located in.
+  The AWS region the S3 bucket is located in. If you are getting `The bucket you are attempting to access must be addressed using the specified endpoint. Please send all future requests to this endpoint.` error, specify your bucket `--region`.
    
 ### YAML Config
 
