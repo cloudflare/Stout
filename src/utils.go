@@ -184,17 +184,23 @@ type AWSConfig struct {
 func loadAWSConfig() (access string, secret string) {
 	cfg := AWSConfig{}
 
-	path, err := homedir.Expand("~/.aws/config")
-	if err != nil {
-		return
-	}
+	for _, file := range []string{"~/.aws/config", "~/.aws/credentials"} {
+		path, err := homedir.Expand(file)
+		if err != nil {
+			continue
+		}
 
-	content, err := ioutil.ReadFile(path)
-	if err != nil {
-		return
-	}
+		content, err := ioutil.ReadFile(path)
+		if err != nil {
+			continue
+		}
 
-	ini.Unmarshal(content, &cfg)
+		ini.Unmarshal(content, &cfg)
+
+		if cfg.Default.AccessKey != "" {
+			break
+		}
+	}
 
 	return cfg.Default.AccessKey, cfg.Default.SecretKey
 }
