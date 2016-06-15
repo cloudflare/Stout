@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"code.google.com/p/go.net/html"
+	"github.com/cenk/backoff"
 
 	"log"
 
@@ -129,7 +130,16 @@ func uploadFile(bucket *s3.Bucket, reader io.Reader, dest string, includeHash bo
 	}
 
 	log.Printf("Uploading to %s in %s (%s) [%d]\n", dest, bucket.Name, hashPrefix, caching)
-	err := bucket.PutReader(dest, buffer, int64(len(data)), guessContentType(dest)+"; charset=utf-8", s3.PublicRead, s3Opts)
+	op := func() error {
+		return bucket.PutReader(dest, buffer, int64(len(data)), guessContentType(dest)+"; charset=utf-8", s3.PublicRead, s3Opts)
+	}
+
+	back := backoff.NewExponentialBackOff()
+	back.MaxElapsedTime = 2 * time.Minute
+
+	err := backoff.RetryNotify(op, back, func(err error, next time.Duration) {
+		log.Println("Error uploading", err, "retrying in", next)
+	})
 	panicIf(err)
 
 	return dest
