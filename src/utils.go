@@ -164,8 +164,8 @@ func loadConfigFile(o *Options) {
 
 	defCfg, _ := file["default"]
 
-	panicIf(mergo.Merge(o, defCfg))
-	panicIf(mergo.Merge(o, envCfg))
+	panicIf(mergo.MergeWithOverwrite(o, defCfg))
+	panicIf(mergo.MergeWithOverwrite(o, envCfg))
 }
 
 func addAWSConfig(o *Options) {
