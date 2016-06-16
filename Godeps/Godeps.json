@@ -1,36 +1,28 @@
 {
 	"ImportPath": "github.com/eagerio/stout",
-	"GoVersion": "go1.3.1",
+	"GoVersion": "go1.6",
+	"GodepVersion": "v63",
 	"Packages": [
-		"src/admin.go",
-		"src/cli.go",
-		"src/deploy.go",
-		"src/rollback.go",
-		"src/utils.go"
+		"./..."
 	],
 	"Deps": [
 		{
-			"ImportPath": "code.google.com/p/go.net/html",
-			"Comment": "null-143",
-			"Rev": "6a58d15273e127ff2697fa5a848435af0ea1255d"
-		},
-		{
-			"ImportPath": "code.google.com/p/go.net/publicsuffix",
-			"Comment": "null-143",
-			"Rev": "6a58d15273e127ff2697fa5a848435af0ea1255d"
+			"ImportPath": "github.com/cenk/backoff",
+			"Comment": "v1.0.0-7-gcdf48bb",
+			"Rev": "cdf48bbc1eb78d1349cbda326a4a037f7ba565c6"
 		},
 		{
 			"ImportPath": "github.com/imdario/mergo",
-			"Comment": "0.1.3-7-ge1856b2",
-			"Rev": "e1856b2128eb93453caf1f21d4f1d9926ebeb593"
+			"Comment": "0.2.2-6-g50d4dbd",
+			"Rev": "50d4dbd4eb0e84778abe37cefef140271d96fade"
 		},
 		{
 			"ImportPath": "github.com/mitchellh/go-homedir",
-			"Rev": "1f6da4a72e57d4e7edd4a7295a585e0a3999a2d4"
+			"Rev": "1111e456ffea841564ac0fa5f69c26ef44dafec9"
 		},
 		{
 			"ImportPath": "github.com/wsxiaoys/terminal/color",
-			"Rev": "9dcaf1d63119a8ac00eef82270eaef08b6aa2328"
+			"Rev": "0940f3fc43a0ed42d04916b1c04578462c650b09"
 		},
 		{
 			"ImportPath": "github.com/zackbloom/go-ini",
@@ -58,11 +50,23 @@
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/ssh/terminal",
-			"Rev": "1351f936d976c60a0a48d728281922cf63eafb8d"
+			"Rev": "5bcd134fee4dd1475da17714aac19c0aa0142e2f"
+		},
+		{
+			"ImportPath": "golang.org/x/net/html",
+			"Rev": "8a52c78636f6b7be1b1e5cb58b01a85f1e082659"
+		},
+		{
+			"ImportPath": "golang.org/x/net/html/atom",
+			"Rev": "8a52c78636f6b7be1b1e5cb58b01a85f1e082659"
+		},
+		{
+			"ImportPath": "golang.org/x/net/publicsuffix",
+			"Rev": "8a52c78636f6b7be1b1e5cb58b01a85f1e082659"
 		},
 		{
 			"ImportPath": "gopkg.in/yaml.v1",
-			"Rev": "feb4ca79644e8e7e39c06095246ee54b1282c118"
+			"Rev": "9f9df34309c04878acc86042b16630b0f696e1de"
 		}
 	]
 }

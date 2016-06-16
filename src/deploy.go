@@ -17,8 +17,8 @@ import (
 	"sync"
 	"time"
 
-	"code.google.com/p/go.net/html"
 	"github.com/cenk/backoff"
+	"golang.org/x/net/html"
 
 	"log"
 

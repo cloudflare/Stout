@@ -6,12 +6,12 @@ import (
 	"os/exec"
 	"strings"
 
-	"code.google.com/p/go.net/publicsuffix"
 	"github.com/zackbloom/goamz/cloudfront"
 	"github.com/zackbloom/goamz/iam"
 	"github.com/zackbloom/goamz/route53"
 	"github.com/zackbloom/goamz/s3"
 	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/net/publicsuffix"
 )
 
 func CreateBucket(options Options) error {
