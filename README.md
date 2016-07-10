@@ -235,7 +235,7 @@ dependencies:
   post:
     - go get github.com/tools/godep
     - git clone git@github.com:EagerIO/Stout.git
-    - cd Stout; godep go build -o ../stout src/*.go
+    - cd Stout; godep restore; godep go build -o ../stout src/*.go
     
 deployment:
   development:
