@@ -14,6 +14,10 @@ import (
 	"golang.org/x/net/publicsuffix"
 )
 
+/*
+* Create bucket with public read policy
+* set website index and error documents to index.html and error.html
+ */
 func CreateBucket(options Options) error {
 	bucket := s3Session.Bucket(options.Bucket)
 
@@ -52,12 +56,17 @@ func CreateBucket(options Options) error {
 	return nil
 }
 
+/*
+* Get cloudfront distribution, create one if it doesn't exist
+ */
 func GetDistribution(options Options) (dist cloudfront.DistributionSummary, err error) {
 	distP, err := cfSession.FindDistributionByAlias(options.Bucket)
 	if err != nil {
 		return
 	}
 
+	// return found CloudFront distribution with the bucket name
+	// TODO(renandincer): check basic elements of the configuration
 	if distP != nil {
 		fmt.Println("CloudFront distribution found with the provided bucket name, assuming config matches.")
 		fmt.Println("If you run into issues, delete the distribution and rerun this command.")
@@ -66,6 +75,7 @@ func GetDistribution(options Options) (dist cloudfront.DistributionSummary, err 
 		return
 	}
 
+	// return a new cloudfront distribution of one with the bucket name exists
 	conf := cloudfront.DistributionConfig{
 		Origins: cloudfront.Origins{
 			cloudfront.Origin{
@@ -114,9 +124,14 @@ func GetDistribution(options Options) (dist cloudfront.DistributionSummary, err 
 		},
 	}
 
+	//create cloudfront distribiton and return it
+	fmt.Println("Creating a new CloudFront distribution with the bucket name.")
 	return cfSession.Create(conf)
 }
 
+/*
+* Create new IAM user upon using the 'create' command, '--no-user' flag disables this
+ */
 func CreateUser(options Options) (key iam.AccessKey, err error) {
 	name := options.Bucket + "_deploy"
 
@@ -130,6 +145,7 @@ func CreateUser(options Options) (key iam.AccessKey, err error) {
 		}
 	}
 
+	// user policy that only allows access to the specified bucket
 	_, err = iamSession.PutUserPolicy(name, name, `{
 			"Version": "2012-10-17",
 			"Statement": [
@@ -161,7 +177,11 @@ func CreateUser(options Options) (key iam.AccessKey, err error) {
 	return keyResp.AccessKey, nil
 }
 
+/*
+* Add Route53 route
+ */
 func UpdateRoute(options Options, dist cloudfront.DistributionSummary) error {
+	//get zone name
 	zoneName, err := publicsuffix.EffectiveTLDPlusOne(options.Bucket)
 	if err != nil {
 		return err
@@ -178,6 +198,7 @@ func UpdateRoute(options Options, dist cloudfront.DistributionSummary) error {
 		panic("More than 100 zones in the account")
 	}
 
+	//find the first zone that matches the bucket zone name
 	var zone *route53.HostedZone
 	for _, z := range resp.HostedZones {
 		if z.Name == zoneName {
@@ -189,9 +210,12 @@ func UpdateRoute(options Options, dist cloudfront.DistributionSummary) error {
 	if zone == nil {
 		fmt.Printf("A Route 53 hosted zone was not found for %s\n", zoneName)
 		if zoneName != options.Bucket {
+			// the bucket could not be found in route53 and is a subdomain
 			fmt.Println("If you would like to use Route 53 to manage your DNS, create a zone for this domain, and update your registrar's configuration to point to the DNS servers Amazon provides and rerun this command.  Note that you must copy any existing DNS configuration you have to Route 53 if you do not wish existing services hosted on this domain to stop working.")
 			fmt.Printf("If you would like to continue to use your existing DNS, create a CNAME record pointing %s to %s and the site setup will be finished.\n", options.Bucket, dist.DomainName)
 		} else {
+			//the bucket is not a subdomain
+			// TODO(renandincer): Simplify this, it might be confusing to a user
 			fmt.Println("Since you are hosting the root of your domain, using an alternative DNS host is unfortunately not possible.")
 			fmt.Println("If you wish to host your site at the root of your domain, you must switch your sites DNS to Amazon's Route 53 and retry this command.")
 		}
@@ -210,7 +234,7 @@ func UpdateRoute(options Options, dist cloudfront.DistributionSummary) error {
 				Name:   options.Bucket,
 				Type:   "A",
 				AliasTarget: route53.AliasTarget{
-					HostedZoneId:         "Z2FDTNDATAQYW2",
+					HostedZoneId:         "Z2FDTNDATAQYW2", //cloudfront distribution
 					DNSName:              dist.DomainName,
 					EvaluateTargetHealth: false,
 				},
@@ -230,6 +254,9 @@ func UpdateRoute(options Options, dist cloudfront.DistributionSummary) error {
 	return nil
 }
 
+/*
+* Create a new user, CloudFront distrbution, s3 bucket, route53 route
+ */
 func Create(options Options) {
 	if s3Session == nil {
 		s3Session = openS3(options.AWSKey, options.AWSSecret, options.AWSRegion)
@@ -310,23 +337,7 @@ Your first deploy command might be:
 
 	}
 
-	fmt.Println("You can begin deploying now, but it can take up to ten minutes for your site to begin to work")
+	fmt.Println("You can begin deploying now, but it can take up to twenty minutes for your site to begin to work")
 	fmt.Println("Depending on the configuration of your site, you might need to set the 'root', 'dest' or 'files' options to get your deploys working as you wish.  See the README for details.")
 	fmt.Println("It's also a good idea to look into the 'env' option, as in real-world situations it usually makes sense to have a development and/or staging site for each of your production sites.")
-}
-
-func createCmd() {
-	options, _ := parseOptions()
-	loadConfigFile(&options)
-	addAWSConfig(&options)
-
-	if options.Bucket == "" {
-		panic("You must specify a bucket")
-	}
-
-	if options.AWSKey == "" || options.AWSSecret == "" {
-		panic("You must specify your AWS credentials")
-	}
-
-	Create(options)
 }

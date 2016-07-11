@@ -9,6 +9,10 @@ import (
 	"github.com/zackbloom/goamz/s3"
 )
 
+/*
+* Rollback
+* Go go the version prefix folder on s3 and copy the html files over to the root as the currently active files
+ */
 func Rollback(options Options, version string) {
 	if s3Session == nil {
 		s3Session = openS3(options.AWSKey, options.AWSSecret, options.AWSRegion)
@@ -16,11 +20,9 @@ func Rollback(options Options, version string) {
 
 	bucket := s3Session.Bucket(options.Bucket)
 
-	// List files with the correct prefix in bucket
-	// Remove their prefix with a copy.
-
 	prefix := filepath.Join(options.Dest, version) + "/"
 
+	//find files that start with the prefix
 	list, err := bucket.List(prefix, "", "", 1000)
 	panicIf(err)
 
@@ -50,6 +52,7 @@ func Rollback(options Options, version string) {
 
 			log.Printf("Aliasing %s to %s", path, newPath)
 
+			//replace old files with new prefixed files in root
 			copyFile(bucket, path, newPath, "text/html", LIMITED)
 
 			count++
@@ -59,24 +62,4 @@ func Rollback(options Options, version string) {
 	wg.Wait()
 
 	log.Printf("Reverted %d HTML files to version %s", count, version)
-}
-
-func rollbackCmd() {
-	options, set := parseOptions()
-	version := set.Arg(0)
-
-	loadConfigFile(&options)
-	addAWSConfig(&options)
-
-	if options.Bucket == "" {
-		panic("You must specify a bucket")
-	}
-	if options.AWSKey == "" || options.AWSSecret == "" {
-		panic("You must specify your AWS credentials")
-	}
-	if version == "" {
-		panic("You must specify a version to rollback to")
-	}
-
-	Rollback(options, version)
 }
