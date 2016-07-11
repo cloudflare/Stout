@@ -28,7 +28,7 @@ func CreateBucket(options Options) error {
 
 	err = bucket.PutBucketWebsite(s3.WebsiteConfiguration{
 		IndexDocument: &s3.IndexDocument{"index.html"},
-		ErrorDocument: &s3.ErrorDocument{"error.html"},
+		ErrorDocument: &s3.ErrorDocument{"index.html"},
 	})
 	if err != nil {
 		return err
