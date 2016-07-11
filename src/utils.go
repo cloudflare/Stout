@@ -1,12 +1,10 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/imdario/mergo"
@@ -30,6 +28,9 @@ var iamSession *iam.IAM
 var r53Session *route53.Route53
 var cfSession *cloudfront.CloudFront
 
+/*
+* Check is the specified region is a valid region
+ */
 func getRegion(region string) aws.Region {
 	regionS, ok := aws.Regions[region]
 	if !ok {
@@ -38,6 +39,9 @@ func getRegion(region string) aws.Region {
 	return regionS
 }
 
+/*
+*	Open a new S3 connection
+ */
 func openS3(key, secret, region string) *s3.S3 {
 	regionS := getRegion(region)
 
@@ -48,6 +52,9 @@ func openS3(key, secret, region string) *s3.S3 {
 	return s3.New(auth, regionS)
 }
 
+/*
+*	Open a new IAM connection
+ */
 func openIAM(key, secret, region string) *iam.IAM {
 	regionS := getRegion(region)
 
@@ -58,6 +65,9 @@ func openIAM(key, secret, region string) *iam.IAM {
 	return iam.New(auth, regionS)
 }
 
+/*
+*	Open a new CF connection
+ */
 func openCloudFront(key, secret string) *cloudfront.CloudFront {
 	auth := aws.Auth{
 		AccessKey: key,
@@ -66,6 +76,9 @@ func openCloudFront(key, secret string) *cloudfront.CloudFront {
 	return cloudfront.NewCloudFront(auth)
 }
 
+/*
+*	Open a new Route53 connection
+ */
 func openRoute53(key, secret string) *route53.Route53 {
 	auth := aws.Auth{
 		AccessKey: key,
@@ -76,16 +89,22 @@ func openRoute53(key, secret string) *route53.Route53 {
 	return r53
 }
 
+/*
+* Catch errors and panic if there is an error
+ */
 func panicIf(err error) {
 	if err != nil {
 		panic(err)
 	}
 }
+
+/*
+* Catch errors and panic if there is an error
+ */
 func must(val interface{}, err error) interface{} {
 	if err != nil {
 		panic(err)
 	}
-
 	return val
 }
 func mustString(val string, err error) string {
@@ -97,41 +116,11 @@ func mustInt(val int, err error) int {
 	return val
 }
 
-type Options struct {
-	Files      string `yaml:"files"`
-	Root       string `yaml:"root"`
-	Dest       string `yaml:"dest"`
-	ConfigFile string `yaml:"-"`
-	Env        string `yaml:"-"`
-	Bucket     string `yaml:"bucket"`
-	AWSKey     string `yaml:"key"`
-	AWSSecret  string `yaml:"secret"`
-	AWSRegion  string `yaml:"region"`
-	NoUser     bool   `yaml:"-"`
-}
-
-func parseOptions() (o Options, set *flag.FlagSet) {
-	set = flag.NewFlagSet(os.Args[1], flag.ExitOnError)
-	//TODO: Set set.Usage
-
-	set.StringVar(&o.Files, "files", "*", "Comma-seperated glob patterns of files to deploy (within root)")
-	set.StringVar(&o.Root, "root", "./", "The local directory to deploy")
-	set.StringVar(&o.Dest, "dest", "./", "The destination directory to write files to in the S3 bucket")
-	set.StringVar(&o.ConfigFile, "config", "", "A yaml file to read configuration from")
-	set.StringVar(&o.Env, "env", "", "The env to read from the config file")
-	set.StringVar(&o.Bucket, "bucket", "", "The bucket to deploy to")
-	set.StringVar(&o.AWSKey, "key", "", "The AWS key to use")
-	set.StringVar(&o.AWSSecret, "secret", "", "The AWS secret of the provided key")
-	set.StringVar(&o.AWSRegion, "region", "us-east-1", "The AWS region the S3 bucket is in")
-	set.BoolVar(&o.NoUser, "no-user", false, "When creating, should we make a user account?")
-
-	set.Parse(os.Args[2:])
-
-	return
-}
-
 type ConfigFile map[string]Options
 
+/*
+* Load config file: this is called from the cli to populate options from the config file
+ */
 func loadConfigFile(o *Options) {
 	isDefault := false
 	configPath := o.ConfigFile
@@ -168,12 +157,18 @@ func loadConfigFile(o *Options) {
 	panicIf(mergo.MergeWithOverwrite(o, envCfg))
 }
 
+/*
+* Load aws config to the options
+ */
 func addAWSConfig(o *Options) {
 	if o.AWSKey == "" && o.AWSSecret == "" {
 		o.AWSKey, o.AWSSecret = loadAWSConfig()
 	}
 }
 
+/*
+* Struct to represent the AWS config
+ */
 type AWSConfig struct {
 	Default struct {
 		AccessKey string `ini:"aws_access_key_id"`
@@ -181,9 +176,13 @@ type AWSConfig struct {
 	} `ini:"[default]"`
 }
 
+/*
+* load the aws config from ~/.aws/
+ */
 func loadAWSConfig() (access string, secret string) {
 	cfg := AWSConfig{}
 
+	//TODO(renandincer): support windows loation for aws credentials
 	for _, file := range []string{"~/.aws/config", "~/.aws/credentials"} {
 		path, err := homedir.Expand(file)
 		if err != nil {
@@ -205,6 +204,9 @@ func loadAWSConfig() (access string, secret string) {
 	return cfg.Default.AccessKey, cfg.Default.SecretKey
 }
 
+/*
+* Copy file in s3
+ */
 func copyFile(bucket *s3.Bucket, from string, to string, contentType string, maxAge int) {
 	copyOpts := s3.CopyOptions{
 		MetadataDirective: "REPLACE",
@@ -221,8 +223,10 @@ func copyFile(bucket *s3.Bucket, from string, to string, contentType string, max
 	}
 }
 
-var pathRe = regexp.MustCompile("/{2,}")
-
+/*
+* Merge files using forward slashes and not the system path seperator if that is different
+* Useful since windows has backslash path separators instead of forward slash which is hard to use with S3
+ */
 func joinPath(parts ...string) string {
 	// Like filepath.Join, but always uses '/'
 	out := filepath.Join(parts...)

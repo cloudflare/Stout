@@ -39,6 +39,9 @@ var NO_GZIP = []string{
 	"ogg",
 }
 
+/*
+* Create the hash of the filepath given
+ */
 func hashFile(path string) []byte {
 	hash := md5.New()
 	io.WriteString(hash, path)
@@ -54,12 +57,19 @@ func hashFile(path string) []byte {
 	return hash.Sum(nil)
 }
 
+/*
+* Create a md5 hash from the bytes given
+ */
 func hashBytes(data []byte) []byte {
 	hash := md5.New()
 	must(io.Copy(hash, bytes.NewReader(data)))
 	return hash.Sum(nil)
 }
 
+/*
+* Create a hash from the xors of the filepaths of files
+* useful for creating hashes of a folder/set of files
+ */
 func hashFiles(files []string) string {
 	hash := new(big.Int)
 	for _, file := range files {
@@ -72,6 +82,9 @@ func hashFiles(files []string) string {
 	return fmt.Sprintf("%x", hash)
 }
 
+/*
+* NOT USED: Get the current head hash to incorporate in the path or hash
+ */
 func getRef() string {
 	gitPath := mustString(exec.LookPath("git"))
 
@@ -84,10 +97,16 @@ func getRef() string {
 	return string(out.Bytes())
 }
 
+/*
+* Guess the correct mime type for the file extension
+ */
 func guessContentType(file string) string {
 	return mime.TypeByExtension(filepath.Ext(file))
 }
 
+/*
+* Should this file compress? use the NO_GZIP list to check if the extension is available for compression
+ */
 func shouldCompress(file string) bool {
 	ext := filepath.Ext(file)
 	for _, e := range NO_GZIP {
@@ -99,6 +118,9 @@ func shouldCompress(file string) bool {
 	return true
 }
 
+/*
+* Upload file s3
+ */
 func uploadFile(bucket *s3.Bucket, reader io.Reader, dest string, includeHash bool, caching int) string {
 	buffer := bytes.NewBuffer([]byte{})
 
@@ -145,17 +167,26 @@ func uploadFile(bucket *s3.Bucket, reader io.Reader, dest string, includeHash bo
 	return dest
 }
 
+/*
+* File reference
+ */
 type FileRef struct {
 	LocalPath    string
 	RemotePath   string
-	UploadedPath string
+	UploadedPath string //uploaded path includes the hash
 }
 
+/*
+* Instance of a file reference
+ */
 type FileInst struct {
 	File     *FileRef
 	InstPath string
 }
 
+/*
+* Open files and pass the handle to uploadFile function
+ */
 func writeFiles(options Options, includeHash bool, files chan *FileRef) {
 	bucket := s3Session.Bucket(options.Bucket)
 
@@ -163,6 +194,7 @@ func writeFiles(options Options, includeHash bool, files chan *FileRef) {
 		handle := must(os.Open(file.LocalPath)).(*os.File)
 		defer handle.Close()
 
+		// The presence of hash determines the expiration
 		var ttl int
 		ttl = FOREVER
 		if !includeHash {
@@ -173,6 +205,9 @@ func writeFiles(options Options, includeHash bool, files chan *FileRef) {
 	}
 }
 
+/*
+* Deploy/upload files consurently
+ */
 func deployFiles(options Options, includeHash bool, files []*FileRef) {
 	ch := make(chan *FileRef)
 
@@ -186,6 +221,7 @@ func deployFiles(options Options, includeHash bool, files []*FileRef) {
 	}
 
 	for _, file := range files {
+		//catch the case where hash might not have been supplied?
 		if !includeHash && strings.HasSuffix(file.RemotePath, ".html") {
 			panic(fmt.Sprintf("Cowardly refusing to deploy an html file (%s) without versioning.", file.RemotePath))
 		}
@@ -233,17 +269,27 @@ func addFiles(form uint8, parent *html.Node, files []string) {
 	}
 }
 
+/*
+* Returns if the host is blank
+ */
 func isLocal(href string) bool {
 	parsed := must(url.Parse(href)).(*url.URL)
 	return parsed.Host == ""
 }
 
+/*
+* add forward slash prefix to links
+ */
 func formatHref(path string) string {
 	if !strings.HasPrefix(path, "/") {
 		path = "/" + path
 	}
 	return path
 }
+
+/*
+* Render HTML file
+ */
 
 func renderHTML(options Options, file HTMLFile) string {
 	handle := must(os.Open(file.File.LocalPath)).(*os.File)
@@ -262,6 +308,7 @@ func renderHTML(options Options, file HTMLFile) string {
 			case "script":
 				for i, a := range n.Attr {
 					if a.Key == "src" {
+						//find the link from the dependencies and replace
 						for _, dep := range file.Deps {
 							if dep.InstPath == a.Val {
 								n.Attr[i].Val = formatHref(dep.File.UploadedPath)
@@ -278,10 +325,13 @@ func renderHTML(options Options, file HTMLFile) string {
 						break
 					}
 				}
+				// TODO(renandincer): take a second look here
+				// This node is not a stylesheet
 				if !stylesheet {
 					return
 				}
 
+				// If it is a link replace
 				for i, a := range n.Attr {
 					if a.Key == "href" {
 						for _, dep := range file.Deps {
@@ -303,6 +353,11 @@ func renderHTML(options Options, file HTMLFile) string {
 	return buf.String()
 }
 
+/*
+* parse html files
+* returns slice of files found in the html files and a base string for the base
+ */
+
 func parseHTML(options Options, path string) (files []string, base string) {
 	files = make([]string, 0)
 
@@ -312,27 +367,30 @@ func parseHTML(options Options, path string) (files []string, base string) {
 	doc := must(html.Parse(handle)).(*html.Node)
 
 	var f func(*html.Node)
+	// loop to go through all nodes of the html file
 	f = func(n *html.Node) {
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
 			f(c)
 		}
-
 		if n.Type == html.ElementNode {
-			switch n.Data {
+			//if it is a base?
+			switch n.Data { //switch by tag name
 			case "base":
 				for _, a := range n.Attr {
 					if a.Key == "href" {
 						base = a.Val
 					}
 				}
+			// or a script with src attribute
 			case "script":
 				for _, a := range n.Attr {
 					if a.Key == "src" {
 						if isLocal(a.Val) {
-							files = append(files, a.Val)
+							files = append(files, a.Val) //add local files to queue
 						}
 					}
 				}
+			//or link attibute
 			case "link":
 				local := false
 				stylesheet := false
@@ -340,14 +398,14 @@ func parseHTML(options Options, path string) (files []string, base string) {
 				for _, a := range n.Attr {
 					switch a.Key {
 					case "href":
-						local = isLocal(a.Val)
+						local = isLocal(a.Val) //determine if the link is local (aka. without a host)
 						href = a.Val
 					case "rel":
 						stylesheet = a.Val == "stylesheet"
 					}
 				}
 				if local && stylesheet {
-					files = append(files, href)
+					files = append(files, href) //if both local and stylesheet add to files
 				}
 			}
 		}
@@ -357,6 +415,9 @@ func parseHTML(options Options, path string) (files []string, base string) {
 	return
 }
 
+/*
+* deploy html to its permanent hashed path and copy them outside for public
+ */
 func deployHTML(options Options, id string, file HTMLFile) {
 	data := renderHTML(options, file)
 
@@ -375,6 +436,9 @@ func deployHTML(options Options, id string, file HTMLFile) {
 	copyFile(bucket, permPath, curPath, "text/html; charset=utf-8", LIMITED)
 }
 
+/*
+* List all files to be acted upon from the root and glob patterns
+ */
 func expandFiles(root string, glob string) []string {
 	out := make([]string, 0)
 	cases := strings.Split(glob, ",")
@@ -409,6 +473,9 @@ func expandFiles(root string, glob string) []string {
 	return out
 }
 
+/*
+* Get file references from the options
+ */
 func listFiles(options Options) []*FileRef {
 	filePaths := expandFiles(options.Root, options.Files)
 
@@ -471,6 +538,9 @@ func extractFileList(options Options, pattern string) (files []string) {
 	return files
 }
 
+/*
+* Pick out files with a specific extension
+ */
 func filesWithExtension(files []*FileRef, ext string) (outFiles []*FileRef) {
 	outFiles = make([]*FileRef, 0)
 	for _, file := range files {
@@ -492,36 +562,46 @@ func (f HTMLFile) GetLocalPath() string {
 	return f.File.LocalPath
 }
 
+/*
+* Deploy main function
+ */
 func Deploy(options Options) {
 	if s3Session == nil {
 		s3Session = openS3(options.AWSKey, options.AWSSecret, options.AWSRegion)
 	}
 
+	// list all files that match the glob pattern in the root
 	files := listFiles(options)
 
 	htmlFileRefs := filesWithExtension(files, ".html")
-	var htmlFiles []HTMLFile
+	var htmlFiles []HTMLFile //slice with html files
 	var id string
 
 	if len(htmlFileRefs) == 0 {
 		log.Println("No HTML files found")
 	} else {
 		inclFiles := make(map[string]*FileRef)
-		htmlFiles = make([]HTMLFile, len(htmlFileRefs))
+		htmlFiles = make([]HTMLFile, len(htmlFileRefs)) //slice with html files
+
 		for i, file := range htmlFileRefs {
 			dir := filepath.Dir(file.LocalPath)
 
-			rel, err := filepath.Rel(options.Root, dir)
+			rel, err := filepath.Rel(options.Root, dir) //get relative filepath
 			if err != nil {
 				panic(err)
 			}
 
+			// get a slice of all paths to stylesheets and scripts
+			// get base if there is a base tag to set the default target for all links
 			paths, base := parseHTML(options, file.LocalPath)
 
+			// TODO(renandincer): make this error more clear
+			// https is included in the http prefix :)
 			if strings.HasPrefix(strings.ToLower(base), "http") || strings.HasPrefix(base, "//") {
 				panic("Absolute base tags are not supported")
 			}
 
+			// Dependancies are a list of file instances
 			htmlFiles[i] = HTMLFile{
 				File: *file,
 				Deps: make([]FileInst, len(paths)),
@@ -530,6 +610,7 @@ func Deploy(options Options) {
 
 			for j, path := range paths {
 				var local, remote string
+				//put file locations in dest and root
 				if strings.HasPrefix(path, "/") {
 					local = joinPath(options.Root, path)
 					remote = joinPath(options.Dest, path)
@@ -537,11 +618,12 @@ func Deploy(options Options) {
 					local = joinPath(options.Root, rel, base, path)
 					remote = joinPath(options.Dest, rel, base, path)
 				}
-
+				//TODO(renandincer): would this work if the reference is two levels down?
 				for strings.HasPrefix(remote, "../") {
 					remote = remote[3:]
 				}
 
+				//check if the file is already included elsewhere
 				ref, ok := inclFiles[local]
 				if !ok {
 					ref = &FileRef{
@@ -551,7 +633,7 @@ func Deploy(options Options) {
 						// Filled in after the deploy:
 						UploadedPath: "",
 					}
-
+					// if not add it
 					inclFiles[local] = ref
 				}
 
@@ -564,6 +646,7 @@ func Deploy(options Options) {
 			}
 		}
 
+		//convert the inclFile map to list
 		inclFileList := make([]*FileRef, len(inclFiles))
 		i := 0
 		for _, ref := range inclFiles {
@@ -571,6 +654,7 @@ func Deploy(options Options) {
 			i++
 		}
 
+		// hash all the paths of all html files and dependencies together
 		hashPaths := make([]string, 0)
 		for _, item := range inclFileList {
 			hashPaths = append(hashPaths, item.LocalPath)
@@ -578,15 +662,15 @@ func Deploy(options Options) {
 		for _, item := range htmlFiles {
 			hashPaths = append(hashPaths, item.File.LocalPath)
 		}
-
 		hash := hashFiles(hashPaths)
-		id = hash[:12]
+		id = hash[:12] //this will go to the html folder
 
 		deployFiles(options, true, inclFileList)
 	}
-
+	//deploy all files requested except the html files
 	deployFiles(options, false, ignoreFiles(files, htmlFileRefs))
 
+	//deploy html
 	if len(htmlFileRefs) != 0 {
 		// Ensure that the new files exist in s3
 		// Time based on "Eventual Consistency: How soon is eventual?"
@@ -618,20 +702,4 @@ func Deploy(options Options) {
 +------------------------------------+
 `, visId)
 
-}
-
-func deployCmd() {
-	options, _ := parseOptions()
-	loadConfigFile(&options)
-	addAWSConfig(&options)
-
-	if options.Bucket == "" {
-		panic("You must specify a bucket")
-	}
-
-	if options.AWSKey == "" || options.AWSSecret == "" {
-		panic("You must specify your AWS credentials")
-	}
-
-	Deploy(options)
 }
