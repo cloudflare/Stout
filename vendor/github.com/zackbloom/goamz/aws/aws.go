@@ -74,8 +74,10 @@ type Region struct {
 
 var Regions = map[string]Region{
 	APNortheast.Name:  APNortheast,
+	APNortheast2.Name: APNortheast2,
 	APSoutheast.Name:  APSoutheast,
 	APSoutheast2.Name: APSoutheast2,
+	APSouth.Name:      APSouth,
 	EUCentral.Name:    EUCentral,
 	EUWest.Name:       EUWest,
 	USEast.Name:       USEast,
@@ -83,6 +85,7 @@ var Regions = map[string]Region{
 	USWest2.Name:      USWest2,
 	USGovWest.Name:    USGovWest,
 	SAEast.Name:       SAEast,
+	CNNorth1.Name:     CNNorth1,
 }
 
 // Designates a signer interface suitable for signing AWS requests, params
