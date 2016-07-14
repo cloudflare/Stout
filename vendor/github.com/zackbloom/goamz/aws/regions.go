@@ -184,6 +184,29 @@ var APSoutheast2 = Region{
 	"https://elasticache.ap-southeast-2.amazonaws.com",
 }
 
+var APSouth = Region{
+	"ap-south-1",
+	"https://ec2.ap-south-1.amazonaws.com",
+	"https://s3-ap-south-1.amazonaws.com",
+	"",
+	true,
+	true,
+	"",
+	"https://sns.ap-south-1.amazonaws.com",
+	"https://sqs.ap-south-1.amazonaws.com",
+	"",
+	"https://iam.amazonaws.com",
+	"https://elasticloadbalancing.ap-south-1.amazonaws.com",
+	"https://dynamodb.ap-south-1.amazonaws.com",
+	ServiceInfo{"https://monitoring.ap-south-1.amazonaws.com", V2Signature},
+	"https://autoscaling.ap-south-1.amazonaws.com",
+	ServiceInfo{"https://rds.ap-south-1.amazonaws.com", V2Signature},
+	"https://kinesis.ap-south-1.amazonaws.com",
+	"https://sts.amazonaws.com",
+	"https://cloudformation.ap-south-1.amazonaws.com",
+	"https://elasticache.ap-south-1.amazonaws.com",
+}
+
 var APNortheast = Region{
 	"ap-northeast-1",
 	"https://ec2.ap-northeast-1.amazonaws.com",
@@ -207,6 +230,29 @@ var APNortheast = Region{
 	"https://elasticache.ap-northeast-1.amazonaws.com",
 }
 
+var APNortheast2 = Region{
+	"ap-northeast-2",
+	"https://ec2.ap-northeast-2.amazonaws.com",
+	"https://s3-ap-northeast-2.amazonaws.com",
+	"",
+	true,
+	true,
+	"",
+	"https://sns.ap-northeast-2.amazonaws.com",
+	"https://sqs.ap-northeast-2.amazonaws.com",
+	"",
+	"https://iam.amazonaws.com",
+	"https://elasticloadbalancing.ap-northeast-2.amazonaws.com",
+	"https://dynamodb.ap-northeast-2.amazonaws.com",
+	ServiceInfo{"https://monitoring.ap-northeast-2.amazonaws.com", V2Signature},
+	"https://autoscaling.ap-northeast-2.amazonaws.com",
+	ServiceInfo{"https://rds.ap-northeast-2.amazonaws.com", V2Signature},
+	"https://kinesis.ap-northeast-2.amazonaws.com",
+	"https://sts.amazonaws.com",
+	"https://cloudformation.ap-northeast-2.amazonaws.com",
+	"https://elasticache.ap-northeast-2.amazonaws.com",
+}
+
 var SAEast = Region{
 	"sa-east-1",
 	"https://ec2.sa-east-1.amazonaws.com",
@@ -228,4 +274,27 @@ var SAEast = Region{
 	"https://sts.amazonaws.com",
 	"https://cloudformation.sa-east-1.amazonaws.com",
 	"https://elasticache.sa-east-1.amazonaws.com",
+}
+
+var CNNorth1 = Region{
+	"cn-north-1",
+	"https://ec2.cn-north-1.amazonaws.com.cn",
+	"https://s3.cn-north-1.amazonaws.com.cn",
+	"",
+	true,
+	true,
+	"",
+	"https://sns.cn-north-1.amazonaws.com.cn",
+	"https://sqs.cn-north-1.amazonaws.com.cn",
+	"",
+	"https://iam.cn-north-1.amazonaws.com.cn",
+	"https://elasticloadbalancing.cn-north-1.amazonaws.com.cn",
+	"https://dynamodb.cn-north-1.amazonaws.com.cn",
+	ServiceInfo{"https://monitoring.cn-north-1.amazonaws.com.cn", V4Signature},
+	"https://autoscaling.cn-north-1.amazonaws.com.cn",
+	ServiceInfo{"https://rds.cn-north-1.amazonaws.com.cn", V4Signature},
+	"",
+	"https://sts.cn-north-1.amazonaws.com.cn",
+	"",
+	"",
 }
