@@ -16,6 +16,8 @@ import (
 	"github.com/zackbloom/goamz/route53"
 	"github.com/zackbloom/goamz/s3"
 	"gopkg.in/yaml.v1"
+
+	"github.com/aws/aws-sdk-go/aws/session"
 )
 
 const (
@@ -27,6 +29,8 @@ var s3Session *s3.S3
 var iamSession *iam.IAM
 var r53Session *route53.Route53
 var cfSession *cloudfront.CloudFront
+
+var awsSession *session.Session
 
 /*
 * Check is the specified region is a valid region

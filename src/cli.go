@@ -44,6 +44,8 @@ type Options struct {
 	AWSSecret  string `yaml:"secret"`
 	AWSRegion  string `yaml:"region"`
 	NoUser     bool   `yaml:"-"`
+	NoSSL      bool   `yaml:"-"`
+	CreateSSL  bool   `yaml:"-"`
 }
 
 /*
@@ -62,6 +64,8 @@ func parseOptions() (o Options, set *flag.FlagSet) {
 	set.StringVar(&o.AWSSecret, "secret", "", "The AWS secret of the provided key")
 	set.StringVar(&o.AWSRegion, "region", "us-east-1", "The AWS region the S3 bucket is in")
 	set.BoolVar(&o.NoUser, "no-user", false, "Should a seperate IAM user be created for this bucket and distribution?")
+	set.BoolVar(&o.CreateSSL, "create-ssl", false, "Request a SSL/TLS certificate to support https")
+	set.BoolVar(&o.NoSSL, "no-ssl", false, "Do not set up SSL/TLS certificates")
 
 	// if there us anything to parse
 	if len(os.Args) > 1 {

@@ -1,11 +1,18 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
+	//amazoncloudfront "github.com/aws/aws-sdk-go/service/cloudfront"
+	amazonaws "github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/acm"
 	"github.com/zackbloom/goamz/cloudfront"
 	"github.com/zackbloom/goamz/iam"
 	"github.com/zackbloom/goamz/route53"
@@ -255,9 +262,250 @@ func UpdateRoute(options Options, dist cloudfront.DistributionSummary) error {
 }
 
 /*
+* Find the best matching certificates to the domain name.
+* return the best matching certificate if a certificate exists
+* (see https://github.com/EagerIO/Stout/issues/20#issuecomment-232174716)
+* or, if there is no certificate with the domain requested, return ""
+ */
+func findMatchingCertificate(options Options, acmService *acm.ACM) (string, error) {
+
+	// list issued and pending certificates
+	certificatesResponse, err := acmService.ListCertificates(&acm.ListCertificatesInput{
+		CertificateStatuses: []*string{
+			amazonaws.String("ISSUED"),
+			amazonaws.String("PENDING_VALIDATION"),
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+	//if there are no certificates, return nil
+	if len(certificatesResponse.CertificateSummaryList) == 0 {
+		return "", nil
+	}
+
+	// if --create-ssl is specified, only look for exact match and stout tag, otherwise return nil and
+	if options.CreateSSL {
+		//determine if any certificate is an exact match
+		for _, certificate := range certificatesResponse.CertificateSummaryList {
+			domainName := *certificate.DomainName
+
+			certificateARN := *certificate.CertificateArn
+			if domainName == options.Bucket {
+				tags, err := acmService.ListTagsForCertificate(&acm.ListTagsForCertificateInput{
+					CertificateArn: amazonaws.String(certificateARN),
+				})
+
+				if err != nil {
+					return "", err
+				}
+
+				for _, tag := range tags.Tags {
+					if *tag.Key == "stout" && *tag.Value == "true" {
+						//this cert was created by stout, take it!
+						return certificateARN, nil
+					}
+				}
+			}
+		}
+		return "", nil
+	}
+
+	//pick all suitable certificates
+	for _, certificate := range certificatesResponse.CertificateSummaryList {
+		//request certificate details
+		domainName := *certificate.DomainName
+		certificateARN := *certificate.CertificateArn
+
+		//request certificate detail for all
+		certificateDetail, err := acmService.DescribeCertificate(&acm.DescribeCertificateInput{
+			CertificateArn: amazonaws.String(certificateARN),
+		})
+
+		if err != nil {
+			return "", err
+		}
+
+		//domain name exactly matches the cert name
+		if domainName == options.Bucket {
+			return certificateARN, nil
+		}
+
+		for _, certSAN := range certificateDetail.Certificate.SubjectAlternativeNames {
+			if *certSAN == options.Bucket {
+				return certificateARN, nil
+			}
+		}
+
+		//domain name falls under a wildcard domain
+		wildcardDomainTLDPlusOne, err := publicsuffix.EffectiveTLDPlusOne(options.Bucket)
+		if err != nil {
+			return "", err
+		}
+		wildCardOfGivenDomain := strings.Join([]string{"*", wildcardDomainTLDPlusOne}, ".")
+
+		if wildCardOfGivenDomain == domainName {
+			return certificateARN, nil
+		}
+
+	}
+	return "", nil
+}
+
+/*
+* Check if the certificate is issued(confirmed)
+ */
+func validateCertificate(acmService *acm.ACM, certificateARN string) error {
+	certificateDetail, err := acmService.DescribeCertificate(&acm.DescribeCertificateInput{
+		CertificateArn: amazonaws.String(certificateARN),
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if *certificateDetail.Certificate.Status != "ISSUED" {
+		//the certificate was not issued yet prompt to check their email
+		validationEmails := make([]string, 0)
+		for _, validationOption := range certificateDetail.Certificate.DomainValidationOptions {
+			for _, validationEmail := range validationOption.ValidationEmails {
+
+				validationEmails = append(validationEmails, *validationEmail)
+			}
+		}
+		vEmails := strings.Join(validationEmails, "\n\t- ")
+		return fmt.Errorf("Certificate not issued yet. Please check one of the following emails or use --no-ssl:\n\t- %s", vEmails)
+	} else {
+		return nil
+	}
+}
+
+/*
+* request a new certificate from ACM
+ */
+func requestCertificate(options Options, acmService *acm.ACM) ([]string, error) {
+	certificateReqResponse, err := acmService.RequestCertificate(&acm.RequestCertificateInput{
+		DomainName: amazonaws.String(options.Bucket),
+		DomainValidationOptions: []*acm.DomainValidationOption{
+			{
+				DomainName:       amazonaws.String(options.Bucket),
+				ValidationDomain: amazonaws.String(options.Bucket),
+			},
+		},
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = acmService.AddTagsToCertificate(&acm.AddTagsToCertificateInput{
+		CertificateArn: amazonaws.String(*certificateReqResponse.CertificateArn),
+		Tags: []*acm.Tag{
+			{
+				Key:   amazonaws.String("stout"),
+				Value: amazonaws.String("true"),
+			},
+		},
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	var certificateDetail *acm.DescribeCertificateOutput
+	// try getting a response from AWS multiple times as validation emails are not available immediately
+	trials := 0
+	for trials < 5 {
+		time.Sleep(2 * time.Second)
+
+		certificateDetail, err = acmService.DescribeCertificate(&acm.DescribeCertificateInput{
+			CertificateArn: amazonaws.String(*certificateReqResponse.CertificateArn),
+		})
+
+		if err != nil {
+			return nil, err
+		}
+		if len(certificateDetail.Certificate.DomainValidationOptions[0].ValidationEmails) != 0 {
+			break
+		} else {
+			trials++
+		}
+	}
+	validationEmails := make([]string, 0)
+
+	for _, validationOption := range certificateDetail.Certificate.DomainValidationOptions {
+		for _, validationEmail := range validationOption.ValidationEmails {
+			validationEmails = append(validationEmails, *validationEmail)
+		}
+	}
+	return validationEmails, nil
+}
+
+/*
+* Set up ssl/tls certificates
+ */
+func setUpSSL(options Options, awsSession *session.Session) (string, error) {
+	if options.CreateSSL && options.NoSSL {
+		return "", errors.New("You have specified conflicting options: please choose either --no-ssl or --create-ssl.")
+	}
+
+	// if the person wants ssl certificates
+	if !options.NoSSL {
+		acmService := acm.New(awsSession)
+		certificateARN, err := findMatchingCertificate(options, acmService)
+
+		if err != nil {
+			return "", errors.New("Could not list ACM certificates while trying to find one to use")
+		}
+
+		// if there is a certificate found
+		if certificateARN != "" {
+			//is there a certificate
+			err := validateCertificate(acmService, certificateARN)
+
+			if err != nil {
+				return "", err
+			}
+			fmt.Printf("Using certificate with ARN: %q\n", certificateARN)
+		} else {
+			// no certificate was found, create or ask the user
+			if options.CreateSSL {
+				fmt.Println("No certificate found to use, creating a new one.")
+				validationEmails, err := requestCertificate(options, acmService)
+				if err != nil {
+					return "", err
+				}
+				errorText := fmt.Sprintf("Please check one of the email addresses below to confirm your new SSL/TLS certificate and run this command again. \n\t- %s", strings.Join(validationEmails, "\n\t- "))
+				return "", errors.New(errorText)
+			} else {
+				// no certificate wes found and nothing was specified.
+				// have a conversation with the user asking what they want to do
+				// or if it it headless, don't set up a cert
+				if terminal.IsTerminal(int(os.Stdout.Fd())) {
+					// talk to the user
+					errorText := fmt.Sprintf("Please specify if you'd like a ssl certificate or not: %q or %q", "--create-ssl", " --no-ssl")
+					return "", errors.New(errorText)
+				} else {
+					// set up without ssl
+					return "", nil
+				}
+			}
+		}
+	}
+	// --no-ssl
+	return "", nil
+}
+
+/*
 * Create a new user, CloudFront distrbution, s3 bucket, route53 route
  */
 func Create(options Options) {
+	_, err := exec.LookPath("aws")
+	if err != nil {
+		fmt.Println("The aws CLI executable was not found in the PATH")
+		fmt.Println("Install it from http://aws.amazon.com/cli/ and try again")
+	}
+
 	if s3Session == nil {
 		s3Session = openS3(options.AWSKey, options.AWSSecret, options.AWSRegion)
 	}
@@ -271,10 +519,22 @@ func Create(options Options) {
 		cfSession = openCloudFront(options.AWSKey, options.AWSSecret)
 	}
 
-	_, err := exec.LookPath("aws")
+	//official sdk connection
+	if awsSession == nil {
+		awsSession = session.New(&amazonaws.Config{
+			Region:      amazonaws.String(options.AWSRegion),
+			Credentials: credentials.NewStaticCredentials(options.AWSKey, options.AWSSecret, ""),
+		})
+	}
+	fmt.Println("Checking for available SSL/TLS certificates")
+	certificateARN, err := setUpSSL(options, awsSession)
 	if err != nil {
-		fmt.Println("The aws CLI executable was not found in the PATH")
-		fmt.Println("Install it from http://aws.amazon.com/cli/ and try again")
+		fmt.Println("Error while processing SSL/TLS certificates")
+		fmt.Println(err)
+		return
+	}
+	if certificateARN == "" {
+		fmt.Println("Creating CloudFront distrbution without SSL/TLS")
 	}
 
 	fmt.Println("Creating Bucket")
