@@ -54,18 +54,18 @@ type Options struct {
 func parseOptions() (o Options, set *flag.FlagSet) {
 	set = flag.NewFlagSet("flags", flag.ExitOnError)
 
-	set.StringVar(&o.Files, "files", "*", "Comma-seperated glob patterns of files to deploy (within root)")
-	set.StringVar(&o.Root, "root", "./", "The local directory to deploy")
-	set.StringVar(&o.Dest, "dest", "./", "The destination directory to write files to in the S3 bucket")
+	set.StringVar(&o.Files, "files", "*", "[deploy] Comma-seperated glob patterns of files to deploy (within root) independently from html referenced js and css files")
+	set.StringVar(&o.Root, "root", "./", "[deploy] The local directory (prefix) to deploy")
+	set.StringVar(&o.Dest, "dest", "./", "[deploy] The destination directory to write files to in the S3 bucket")
 	set.StringVar(&o.ConfigFile, "config", "", "A yaml file to read configuration from")
 	set.StringVar(&o.Env, "env", "", "The env to read from the config file")
-	set.StringVar(&o.Bucket, "bucket", "", "The bucket to deploy to")
+	set.StringVar(&o.Bucket, "bucket", "", "The bucket to deploy to, this should also be the domain you plan to use in Route53")
 	set.StringVar(&o.AWSKey, "key", "", "The AWS key to use")
 	set.StringVar(&o.AWSSecret, "secret", "", "The AWS secret of the provided key")
 	set.StringVar(&o.AWSRegion, "region", "us-east-1", "The AWS region the S3 bucket is in")
-	set.BoolVar(&o.NoUser, "no-user", false, "Should a seperate IAM user be created for this bucket and distribution?")
-	set.BoolVar(&o.CreateSSL, "create-ssl", false, "Request a SSL/TLS certificate to support https")
-	set.BoolVar(&o.NoSSL, "no-ssl", false, "Do not set up SSL/TLS certificates")
+	set.BoolVar(&o.NoUser, "no-user", false, "[create] Should a seperate IAM user be created for this bucket and distribution?")
+	set.BoolVar(&o.CreateSSL, "create-ssl", false, "[create] Request a SSL/TLS certificate to support https. Using this command will require email validation to prove you own this domain.")
+	set.BoolVar(&o.NoSSL, "no-ssl", false, "[create] Do not set up SSL/TLS certificates")
 
 	// if there us anything to parse
 	if len(os.Args) > 1 {
