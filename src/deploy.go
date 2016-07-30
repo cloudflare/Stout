@@ -130,8 +130,10 @@ func uploadFile(bucket *s3.Bucket, reader io.Reader, dest string, includeHash bo
 	}
 
 	log.Printf("Uploading to %s in %s (%s) [%d]\n", dest, bucket.Name, hashPrefix, caching)
+
 	op := func() error {
-		return bucket.PutReader(dest, buffer, int64(len(data)), guessContentType(dest)+"; charset=utf-8", s3.PublicRead, s3Opts)
+		// We need to create a new reader each time, as we might be doing this more than once (if it fails)
+		return bucket.PutReader(dest, bytes.NewReader(data), int64(len(data)), guessContentType(dest)+"; charset=utf-8", s3.PublicRead, s3Opts)
 	}
 
 	back := backoff.NewExponentialBackOff()

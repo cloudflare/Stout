@@ -9,7 +9,7 @@ to paid services like Divshot, to dynamic web servers like Rails, or to manually
 
 Traditionally uploading your files to S3 introduces a serious caching issue we ran into in practice at [Eager](https://eager.io).
 The cache for the various files your site depends on can expire at different times, meaning your users get an inconsistent (broken) set of files for a
-time after every single deploy.  Further, traditional static site deployments don't offer any method of rolling back a previous deploy.
+time after every single deploy. Further, traditional static site deployments don't offer any method of rolling back a previous deploy.
 
 We built Stout to fix these issues.
 
@@ -50,6 +50,12 @@ If your built files are in another directory, add the `--root` option:
 
 ```sh
 stout deploy --bucket my.website.com --key MY_AWS_KEY --secret MY_AWS_SECRET --root ./build
+```
+
+If your bucket located not in the default region, which is us-east-1, add the `--region` option:
+
+```sh
+stout deploy --bucket my.website.com --key MY_AWS_KEY --secret MY_AWS_SECRET --region us-west-1
 ```
 
 If you don't want to deploy all the files in your folder, use the files argument.
@@ -126,6 +132,8 @@ The options are:
 
 ##### `region` ("us-east-1")
   The AWS region the S3 bucket is located in.
+
+  If you are getting a `The bucket you are attempting to access must be addressed using the specified endpoint. Please send all future requests to this endpoint.` error, specify your bucket `--region`.
 
 ### YAML Config
 
@@ -282,7 +290,7 @@ It is possible to use a client-side router (where you have multiple request URLs
 - Download the release for your system type from our [releases](https://github.com/EagerIO/Stout/releases)
 - Copy or symlink the `stout` binary contained in the archive into your path (for example, into `/usr/local/bin`)
 
-Or, if you're using Arch Linux, Stout has been packaged for the  [AUR](https://aur.archlinux.org/packages/stout-bin/).
+Or, if you're using Arch Linux, Stout has been packaged for the [AUR](https://aur.archlinux.org/packages/stout-bin/).
 
 ### Building
 
