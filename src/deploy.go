@@ -536,8 +536,13 @@ func Deploy(options Options) {
 					local = joinPath(options.Root, path)
 					remote = joinPath(options.Dest, path)
 				} else {
-					local = joinPath(options.Root, rel, base, path)
-					remote = joinPath(options.Dest, rel, base, path)
+					if strings.HasPrefix(base, "/") {
+						local = joinPath(options.Root, base, path)
+						remote = joinPath(options.Dest, base, path)
+					} else {
+						local = joinPath(options.Root, rel, base, path)
+						remote = joinPath(options.Dest, rel, base, path)
+					}
 				}
 
 				for strings.HasPrefix(remote, "../") {
