@@ -1,12 +1,18 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
-	"github.com/zackbloom/goamz/cloudfront"
+	amazonaws "github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/acm"
+	amazoncloudfront "github.com/aws/aws-sdk-go/service/cloudfront"
 	"github.com/zackbloom/goamz/iam"
 	"github.com/zackbloom/goamz/route53"
 	"github.com/zackbloom/goamz/s3"
@@ -14,6 +20,10 @@ import (
 	"golang.org/x/net/publicsuffix"
 )
 
+/*
+* Create bucket with public read policy
+* set website index and error documents to index.html and error.html
+ */
 func CreateBucket(options Options) error {
 	bucket := s3Session.Bucket(options.Bucket)
 
@@ -24,7 +34,7 @@ func CreateBucket(options Options) error {
 
 	err = bucket.PutBucketWebsite(s3.WebsiteConfiguration{
 		IndexDocument: &s3.IndexDocument{"index.html"},
-		ErrorDocument: &s3.ErrorDocument{"error.html"},
+		ErrorDocument: &s3.ErrorDocument{"index.html"},
 	})
 	if err != nil {
 		return err
@@ -52,71 +62,210 @@ func CreateBucket(options Options) error {
 	return nil
 }
 
-func GetDistribution(options Options) (dist cloudfront.DistributionSummary, err error) {
-	distP, err := cfSession.FindDistributionByAlias(options.Bucket)
+/*
+* Get cloudfront distribution
+* create one if none already exists for the specified domain name in options
+* Check if SSL is set up for the distribution and set that up if a ACM Cert ARN is passed in
+* Returns distribution domain name
+ */
+func GetDistribution(amazonSession *session.Session, options Options, certificateARN string) (string, error) {
+	cloudfrontService := amazoncloudfront.New(amazonSession)
+	dists, err := cloudfrontService.ListDistributions(&amazoncloudfront.ListDistributionsInput{
+		MaxItems: amazonaws.Int64(500),
+	})
 	if err != nil {
-		return
+		return "", err
 	}
 
-	if distP != nil {
-		fmt.Println("CloudFront distribution found with the provided bucket name, assuming config matches.")
-		fmt.Println("If you run into issues, delete the distribution and rerun this command.")
-
-		dist = *distP
-		return
+	if *dists.DistributionList.IsTruncated {
+		return "", errors.New("You have more than 500 distributions, please consider opening a GitHub issue if you require support for this.")
 	}
 
-	conf := cloudfront.DistributionConfig{
-		Origins: cloudfront.Origins{
-			cloudfront.Origin{
-				Id:         "S3-" + options.Bucket,
-				DomainName: options.Bucket + ".s3-website-" + options.AWSRegion + ".amazonaws.com",
-				CustomOriginConfig: &cloudfront.CustomOriginConfig{
-					HTTPPort:             80,
-					HTTPSPort:            443,
-					OriginProtocolPolicy: "http-only",
+	var currentDist *amazoncloudfront.DistributionSummary
+	//check for already existing distributions
+	for _, distSummary := range dists.DistributionList.Items {
+		for _, alias := range distSummary.Aliases.Items {
+			if *alias == options.Bucket {
+				//matching distribution found
+				fmt.Println("CloudFront distribution found with the provided bucket name, assuming config matches.")
+				fmt.Println("If you run into issues, delete the distribution and rerun this command.")
+				currentDist = distSummary
+			}
+		}
+	}
+
+	if currentDist != nil && !options.CreateSSL {
+		// if there is a distribution already and there is no upgrade request, return it
+		return *currentDist.DomainName, nil
+	} else if currentDist != nil && options.CreateSSL {
+		// if there is a distribution and createssl is an option, check if the distribution has a certificate
+		distDetail, err := cloudfrontService.GetDistribution(&amazoncloudfront.GetDistributionInput{
+			Id: amazonaws.String(*currentDist.Id),
+		})
+		if err != nil {
+			return "", err
+		}
+		// if there is no certificate installed, update it
+		if *distDetail.Distribution.DistributionConfig.ViewerCertificate.CloudFrontDefaultCertificate {
+			fmt.Println("Updating current CloudFront distribution with your new certificate")
+			distDetail.Distribution.DistributionConfig.ViewerCertificate = &amazoncloudfront.ViewerCertificate{
+				ACMCertificateArn:      amazonaws.String(certificateARN),
+				Certificate:            amazonaws.String(certificateARN),
+				CertificateSource:      amazonaws.String("acm"),
+				MinimumProtocolVersion: amazonaws.String("TLSv1"),
+				SSLSupportMethod:       amazonaws.String("sni-only"),
+			}
+			_, err := cloudfrontService.UpdateDistribution(&amazoncloudfront.UpdateDistributionInput{
+				DistributionConfig: distDetail.Distribution.DistributionConfig,
+				Id:                 distDetail.Distribution.Id,
+				IfMatch:            distDetail.ETag,
+			})
+			if err != nil {
+				return "", err
+			}
+		}
+		return *currentDist.DomainName, nil
+	}
+
+	//no matching distribution, create one
+	var viewerCertificate amazoncloudfront.ViewerCertificate
+	if certificateARN != "" {
+		viewerCertificate = amazoncloudfront.ViewerCertificate{
+			ACMCertificateArn:      amazonaws.String(certificateARN),
+			Certificate:            amazonaws.String(certificateARN),
+			CertificateSource:      amazonaws.String("acm"),
+			MinimumProtocolVersion: amazonaws.String("TLSv1"),
+			SSLSupportMethod:       amazonaws.String("sni-only"),
+		}
+	} else {
+		viewerCertificate = amazoncloudfront.ViewerCertificate{
+			CertificateSource:            amazonaws.String("cloudfront"),
+			CloudFrontDefaultCertificate: amazonaws.Bool(true),
+			MinimumProtocolVersion:       amazonaws.String("SSLv3"),
+		}
+	}
+	params := &amazoncloudfront.CreateDistributionInput{
+		DistributionConfig: &amazoncloudfront.DistributionConfig{
+			CallerReference: amazonaws.String(options.Bucket),
+			Comment:         amazonaws.String(options.Bucket),
+			DefaultCacheBehavior: &amazoncloudfront.DefaultCacheBehavior{
+				ForwardedValues: &amazoncloudfront.ForwardedValues{
+					Cookies: &amazoncloudfront.CookiePreference{
+						Forward: amazonaws.String("none"),
+					},
+					QueryString: amazonaws.Bool(false),
+					Headers: &amazoncloudfront.Headers{
+						Quantity: amazonaws.Int64(0),
+					},
+				},
+				MinTTL:         amazonaws.Int64(0),
+				TargetOriginId: amazonaws.String("S3-" + options.Bucket),
+				TrustedSigners: &amazoncloudfront.TrustedSigners{
+					Enabled:  amazonaws.Bool(false),
+					Quantity: amazonaws.Int64(0),
+				},
+				ViewerProtocolPolicy: amazonaws.String("allow-all"),
+				AllowedMethods: &amazoncloudfront.AllowedMethods{
+					Items: []*string{
+						amazonaws.String("HEAD"),
+						amazonaws.String("GET"),
+					},
+					Quantity: amazonaws.Int64(2),
+					CachedMethods: &amazoncloudfront.CachedMethods{
+						Items: []*string{
+							amazonaws.String("HEAD"),
+							amazonaws.String("GET"),
+						},
+						Quantity: amazonaws.Int64(2),
+					},
+				},
+				Compress:        amazonaws.Bool(false),
+				DefaultTTL:      amazonaws.Int64(86400),
+				MaxTTL:          amazonaws.Int64(31536000),
+				SmoothStreaming: amazonaws.Bool(false),
+			},
+			Enabled: amazonaws.Bool(true),
+			Origins: &amazoncloudfront.Origins{
+				Quantity: amazonaws.Int64(1),
+				Items: []*amazoncloudfront.Origin{
+					{
+						DomainName: amazonaws.String(options.Bucket + ".s3-website-" + options.AWSRegion + ".amazonaws.com"),
+						Id:         amazonaws.String("S3-" + options.Bucket),
+						CustomHeaders: &amazoncloudfront.CustomHeaders{
+							Quantity: amazonaws.Int64(0),
+						},
+						CustomOriginConfig: &amazoncloudfront.CustomOriginConfig{
+							HTTPPort:             amazonaws.Int64(80),
+							HTTPSPort:            amazonaws.Int64(443),
+							OriginProtocolPolicy: amazonaws.String("http-only"),
+							OriginSslProtocols: &amazoncloudfront.OriginSslProtocols{
+								Items: []*string{
+									amazonaws.String("SSLv3"),
+									amazonaws.String("TLSv1"),
+								},
+								Quantity: amazonaws.Int64(2),
+							},
+						},
+						OriginPath: amazonaws.String(""),
+					},
 				},
 			},
-		},
-		DefaultRootObject: "index.html",
-		PriceClass:        "PriceClass_All",
-		Enabled:           true,
-		DefaultCacheBehavior: cloudfront.CacheBehavior{
-			TargetOriginId:       "S3-" + options.Bucket,
-			ViewerProtocolPolicy: "allow-all",
-			AllowedMethods: cloudfront.AllowedMethods{
-				Allowed: []string{"GET", "HEAD"},
-				Cached:  []string{"GET", "HEAD"},
+			Aliases: &amazoncloudfront.Aliases{
+				Quantity: amazonaws.Int64(1),
+				Items: []*string{
+					amazonaws.String(options.Bucket),
+				},
 			},
-		},
-		ViewerCertificate: &cloudfront.ViewerCertificate{
-			CloudFrontDefaultCertificate: true,
-			MinimumProtocolVersion:       "TLSv1",
-			SSLSupportMethod:             "sni-only",
-		},
-		CustomErrorResponses: cloudfront.CustomErrorResponses{
-			// This adds support for single-page apps
-			cloudfront.CustomErrorResponse{
-				ErrorCode:          403,
-				ResponsePagePath:   "/index.html",
-				ResponseCode:       200,
-				ErrorCachingMinTTL: 60,
+			CacheBehaviors: &amazoncloudfront.CacheBehaviors{
+				Quantity: amazonaws.Int64(0),
 			},
-			cloudfront.CustomErrorResponse{
-				ErrorCode:          404,
-				ResponsePagePath:   "/index.html",
-				ResponseCode:       200,
-				ErrorCachingMinTTL: 60,
+			CustomErrorResponses: &amazoncloudfront.CustomErrorResponses{
+				Quantity: amazonaws.Int64(2),
+				Items: []*amazoncloudfront.CustomErrorResponse{
+					{
+						ErrorCode:          amazonaws.Int64(403),
+						ErrorCachingMinTTL: amazonaws.Int64(60),
+						ResponseCode:       amazonaws.String("200"),
+						ResponsePagePath:   amazonaws.String("/index.html"),
+					},
+					{
+						ErrorCode:          amazonaws.Int64(404),
+						ErrorCachingMinTTL: amazonaws.Int64(60),
+						ResponseCode:       amazonaws.String("200"),
+						ResponsePagePath:   amazonaws.String("/index.html"),
+					},
+				},
 			},
-		},
-		Aliases: cloudfront.Aliases{
-			options.Bucket,
+			DefaultRootObject: amazonaws.String("index.html"),
+			Logging: &amazoncloudfront.LoggingConfig{
+				Bucket:         amazonaws.String(""),
+				Enabled:        amazonaws.Bool(false),
+				IncludeCookies: amazonaws.Bool(false),
+				Prefix:         amazonaws.String(""),
+			},
+			PriceClass: amazonaws.String("PriceClass_All"),
+			Restrictions: &amazoncloudfront.Restrictions{
+				GeoRestriction: &amazoncloudfront.GeoRestriction{
+					Quantity:        amazonaws.Int64(0),
+					RestrictionType: amazonaws.String("none"),
+				},
+			},
+			ViewerCertificate: &viewerCertificate,
+			WebACLId:          amazonaws.String(""),
 		},
 	}
+	resp, err := cloudfrontService.CreateDistribution(params)
+	if err != nil {
+		return "", err
+	}
 
-	return cfSession.Create(conf)
+	fmt.Println("Creating a new CloudFront distribution with the bucket name.")
+	return *resp.Distribution.DomainName, nil
 }
 
+/*
+* Create new IAM user upon using the 'create' command, '--no-user' flag disables this
+ */
 func CreateUser(options Options) (key iam.AccessKey, err error) {
 	name := options.Bucket + "_deploy"
 
@@ -130,6 +279,7 @@ func CreateUser(options Options) (key iam.AccessKey, err error) {
 		}
 	}
 
+	// user policy that only allows access to the specified bucket
 	_, err = iamSession.PutUserPolicy(name, name, `{
 			"Version": "2012-10-17",
 			"Statement": [
@@ -161,7 +311,11 @@ func CreateUser(options Options) (key iam.AccessKey, err error) {
 	return keyResp.AccessKey, nil
 }
 
-func UpdateRoute(options Options, dist cloudfront.DistributionSummary) error {
+/*
+* Add Route53 route
+ */
+func UpdateRoute(options Options, distDomainName string) error {
+	//get zone name
 	zoneName, err := publicsuffix.EffectiveTLDPlusOne(options.Bucket)
 	if err != nil {
 		return err
@@ -178,6 +332,7 @@ func UpdateRoute(options Options, dist cloudfront.DistributionSummary) error {
 		panic("More than 100 zones in the account")
 	}
 
+	//find the first zone that matches the bucket zone name
 	var zone *route53.HostedZone
 	for _, z := range resp.HostedZones {
 		if z.Name == zoneName {
@@ -189,9 +344,12 @@ func UpdateRoute(options Options, dist cloudfront.DistributionSummary) error {
 	if zone == nil {
 		fmt.Printf("A Route 53 hosted zone was not found for %s\n", zoneName)
 		if zoneName != options.Bucket {
+			// the bucket could not be found in route53 and is a subdomain
 			fmt.Println("If you would like to use Route 53 to manage your DNS, create a zone for this domain, and update your registrar's configuration to point to the DNS servers Amazon provides and rerun this command.  Note that you must copy any existing DNS configuration you have to Route 53 if you do not wish existing services hosted on this domain to stop working.")
-			fmt.Printf("If you would like to continue to use your existing DNS, create a CNAME record pointing %s to %s and the site setup will be finished.\n", options.Bucket, dist.DomainName)
+			fmt.Printf("If you would like to continue to use your existing DNS, create a CNAME record pointing %s to %s and the site setup will be finished.\n", options.Bucket, distDomainName)
 		} else {
+			//the bucket is not a subdomain
+			// TODO(renandincer): Simplify this, it might be confusing to a user
 			fmt.Println("Since you are hosting the root of your domain, using an alternative DNS host is unfortunately not possible.")
 			fmt.Println("If you wish to host your site at the root of your domain, you must switch your sites DNS to Amazon's Route 53 and retry this command.")
 		}
@@ -210,8 +368,8 @@ func UpdateRoute(options Options, dist cloudfront.DistributionSummary) error {
 				Name:   options.Bucket,
 				Type:   "A",
 				AliasTarget: route53.AliasTarget{
-					HostedZoneId:         "Z2FDTNDATAQYW2",
-					DNSName:              dist.DomainName,
+					HostedZoneId:         "Z2FDTNDATAQYW2", //cloudfront distribution
+					DNSName:              distDomainName,
 					EvaluateTargetHealth: false,
 				},
 			},
@@ -230,7 +388,252 @@ func UpdateRoute(options Options, dist cloudfront.DistributionSummary) error {
 	return nil
 }
 
+/*
+* Find the best matching certificates to the domain name.
+* return the best matching certificate if a certificate exists
+* (see https://github.com/EagerIO/Stout/issues/20#issuecomment-232174716)
+* or, if there is no certificate with the domain requested, return ""
+ */
+func findMatchingCertificate(options Options, acmService *acm.ACM) (string, error) {
+
+	// list issued and pending certificates
+	certificatesResponse, err := acmService.ListCertificates(&acm.ListCertificatesInput{
+		CertificateStatuses: []*string{
+			amazonaws.String("ISSUED"),
+			amazonaws.String("PENDING_VALIDATION"),
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+	//if there are no certificates, return nil
+	if len(certificatesResponse.CertificateSummaryList) == 0 {
+		return "", nil
+	}
+
+	// if --create-ssl is specified, only look for exact match and stout tag, otherwise return nil and
+	if options.CreateSSL {
+		//determine if any certificate is an exact match
+		for _, certificate := range certificatesResponse.CertificateSummaryList {
+			domainName := *certificate.DomainName
+
+			certificateARN := *certificate.CertificateArn
+			if domainName == options.Bucket {
+				tags, err := acmService.ListTagsForCertificate(&acm.ListTagsForCertificateInput{
+					CertificateArn: amazonaws.String(certificateARN),
+				})
+
+				if err != nil {
+					return "", err
+				}
+
+				for _, tag := range tags.Tags {
+					if *tag.Key == "stout" && *tag.Value == "true" {
+						//this cert was created by stout, take it!
+						return certificateARN, nil
+					}
+				}
+			}
+		}
+		return "", nil
+	}
+
+	//pick all suitable certificates
+	for _, certificate := range certificatesResponse.CertificateSummaryList {
+		//request certificate details
+		domainName := *certificate.DomainName
+		certificateARN := *certificate.CertificateArn
+
+		//request certificate detail for all
+		certificateDetail, err := acmService.DescribeCertificate(&acm.DescribeCertificateInput{
+			CertificateArn: amazonaws.String(certificateARN),
+		})
+
+		if err != nil {
+			return "", err
+		}
+
+		//domain name exactly matches the cert name
+		if domainName == options.Bucket {
+			return certificateARN, nil
+		}
+
+		for _, certSAN := range certificateDetail.Certificate.SubjectAlternativeNames {
+			if *certSAN == options.Bucket {
+				return certificateARN, nil
+			}
+		}
+
+		//domain name falls under a wildcard domain
+		wildcardDomainTLDPlusOne, err := publicsuffix.EffectiveTLDPlusOne(options.Bucket)
+		if err != nil {
+			return "", err
+		}
+		wildCardOfGivenDomain := strings.Join([]string{"*", wildcardDomainTLDPlusOne}, ".")
+
+		if wildCardOfGivenDomain == domainName {
+			return certificateARN, nil
+		}
+
+	}
+	return "", nil
+}
+
+/*
+* Check if the certificate is issued(confirmed)
+ */
+func validateCertificate(acmService *acm.ACM, certificateARN string) error {
+	certificateDetail, err := acmService.DescribeCertificate(&acm.DescribeCertificateInput{
+		CertificateArn: amazonaws.String(certificateARN),
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if *certificateDetail.Certificate.Status != "ISSUED" {
+		//the certificate was not issued yet prompt to check their email
+		validationEmails := make([]string, 0)
+		for _, validationOption := range certificateDetail.Certificate.DomainValidationOptions {
+			for _, validationEmail := range validationOption.ValidationEmails {
+
+				validationEmails = append(validationEmails, *validationEmail)
+			}
+		}
+		vEmails := strings.Join(validationEmails, "\n\t- ")
+		return fmt.Errorf("Certificate not issued yet. Please check one of the following emails or use --no-ssl:\n\t- %s", vEmails)
+	} else {
+		return nil
+	}
+}
+
+/*
+* request a new certificate from ACM
+ */
+func requestCertificate(options Options, acmService *acm.ACM) ([]string, error) {
+	certificateReqResponse, err := acmService.RequestCertificate(&acm.RequestCertificateInput{
+		DomainName: amazonaws.String(options.Bucket),
+		DomainValidationOptions: []*acm.DomainValidationOption{
+			{
+				DomainName:       amazonaws.String(options.Bucket),
+				ValidationDomain: amazonaws.String(options.Bucket),
+			},
+		},
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = acmService.AddTagsToCertificate(&acm.AddTagsToCertificateInput{
+		CertificateArn: amazonaws.String(*certificateReqResponse.CertificateArn),
+		Tags: []*acm.Tag{
+			{
+				Key:   amazonaws.String("stout"),
+				Value: amazonaws.String("true"),
+			},
+		},
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	var certificateDetail *acm.DescribeCertificateOutput
+	// try getting a response from AWS multiple times as validation emails are not available immediately
+	trials := 0
+	for trials < 5 {
+		time.Sleep(2 * time.Second)
+
+		certificateDetail, err = acmService.DescribeCertificate(&acm.DescribeCertificateInput{
+			CertificateArn: amazonaws.String(*certificateReqResponse.CertificateArn),
+		})
+
+		if err != nil {
+			return nil, err
+		}
+		if len(certificateDetail.Certificate.DomainValidationOptions[0].ValidationEmails) != 0 {
+			break
+		} else {
+			trials++
+		}
+	}
+	validationEmails := make([]string, 0)
+
+	for _, validationOption := range certificateDetail.Certificate.DomainValidationOptions {
+		for _, validationEmail := range validationOption.ValidationEmails {
+			validationEmails = append(validationEmails, *validationEmail)
+		}
+	}
+	return validationEmails, nil
+}
+
+/*
+* Set up ssl/tls certificates
+ */
+func setUpSSL(options Options, awsSession *session.Session) (string, error) {
+	if options.CreateSSL && options.NoSSL {
+		return "", errors.New("You have specified conflicting options: please choose either --no-ssl or --create-ssl.")
+	}
+
+	// if the person wants ssl certificates
+	if !options.NoSSL {
+		acmService := acm.New(awsSession)
+		certificateARN, err := findMatchingCertificate(options, acmService)
+
+		if err != nil {
+			return "", errors.New("Could not list ACM certificates while trying to find one to use")
+		}
+
+		// if there is a certificate found
+		if certificateARN != "" {
+			//is there a certificate
+			err := validateCertificate(acmService, certificateARN)
+
+			if err != nil {
+				return "", err
+			}
+			fmt.Printf("Using certificate with ARN: %q\n", certificateARN)
+			return certificateARN, nil
+		} else {
+			// no certificate was found, create or ask the user
+			if options.CreateSSL {
+				fmt.Println("No certificate found to use, creating a new one.")
+				validationEmails, err := requestCertificate(options, acmService)
+				if err != nil {
+					return "", err
+				}
+				errorText := fmt.Sprintf("Please check one of the email addresses below to confirm your new SSL/TLS certificate and run this command again. \n\t- %s", strings.Join(validationEmails, "\n\t- "))
+				return "", errors.New(errorText)
+			} else {
+				// no certificate wes found and nothing was specified.
+				// have a conversation with the user asking what they want to do
+				// or if it it headless, don't set up a cert
+				if terminal.IsTerminal(int(os.Stdout.Fd())) {
+					// talk to the user
+					errorText := fmt.Sprintf("Please specify if you'd like a ssl certificate or not: %q or %q", "--create-ssl", " --no-ssl")
+					return "", errors.New(errorText)
+				} else {
+					// set up without ssl
+					return "", nil
+				}
+			}
+		}
+	}
+	// --no-ssl
+	return "", nil
+}
+
+/*
+* Create a new user, CloudFront distrbution, s3 bucket, route53 route
+ */
 func Create(options Options) {
+	_, err := exec.LookPath("aws")
+	if err != nil {
+		fmt.Println("The aws CLI executable was not found in the PATH")
+		fmt.Println("Install it from http://aws.amazon.com/cli/ and try again")
+	}
+
 	if s3Session == nil {
 		s3Session = openS3(options.AWSKey, options.AWSSecret, options.AWSRegion)
 	}
@@ -244,10 +647,22 @@ func Create(options Options) {
 		cfSession = openCloudFront(options.AWSKey, options.AWSSecret)
 	}
 
-	_, err := exec.LookPath("aws")
+	//official sdk connection
+	if awsSession == nil {
+		awsSession = session.New(&amazonaws.Config{
+			Region:      amazonaws.String(options.AWSRegion),
+			Credentials: credentials.NewStaticCredentials(options.AWSKey, options.AWSSecret, ""),
+		})
+	}
+	fmt.Println("Checking for available SSL/TLS certificates")
+	certificateARN, err := setUpSSL(options, awsSession)
 	if err != nil {
-		fmt.Println("The aws CLI executable was not found in the PATH")
-		fmt.Println("Install it from http://aws.amazon.com/cli/ and try again")
+		fmt.Println("Error while processing SSL/TLS certificates")
+		fmt.Println(err)
+		return
+	}
+	if certificateARN == "" {
+		fmt.Println("Will set up CloudFront distrbution without SSL/TLS")
 	}
 
 	fmt.Println("Creating Bucket")
@@ -258,9 +673,8 @@ func Create(options Options) {
 		fmt.Println(err)
 		return
 	}
-
 	fmt.Println("Loading/Creating CloudFront Distribution")
-	dist, err := GetDistribution(options)
+	distDomainName, err := GetDistribution(awsSession, options, certificateARN)
 
 	if err != nil {
 		fmt.Println("Error loading/creating CloudFront distribution")
@@ -269,7 +683,7 @@ func Create(options Options) {
 	}
 
 	fmt.Println("Adding Route")
-	err = UpdateRoute(options, dist)
+	err = UpdateRoute(options, distDomainName)
 
 	if err != nil {
 		fmt.Println("Error adding route to Route53 DNS config")
@@ -310,23 +724,7 @@ Your first deploy command might be:
 
 	}
 
-	fmt.Println("You can begin deploying now, but it can take up to ten minutes for your site to begin to work")
+	fmt.Println("You can begin deploying now, but it can take up to twenty minutes for your site to begin to work")
 	fmt.Println("Depending on the configuration of your site, you might need to set the 'root', 'dest' or 'files' options to get your deploys working as you wish.  See the README for details.")
 	fmt.Println("It's also a good idea to look into the 'env' option, as in real-world situations it usually makes sense to have a development and/or staging site for each of your production sites.")
-}
-
-func createCmd() {
-	options, _ := parseOptions()
-	loadConfigFile(&options)
-	addAWSConfig(&options)
-
-	if options.Bucket == "" {
-		panic("You must specify a bucket")
-	}
-
-	if options.AWSKey == "" || options.AWSSecret == "" {
-		panic("You must specify your AWS credentials")
-	}
-
-	Create(options)
 }

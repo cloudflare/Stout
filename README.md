@@ -242,9 +242,8 @@ Be sure to replace `BUCKET` with your bucket's actual name.
  ```yaml
 dependencies:
   post:
-    - go get github.com/tools/godep
     - git clone git@github.com:EagerIO/Stout.git
-    - cd Stout; godep go build -o ../stout src/*.go
+    - cd Stout; go build -o ../stout src/*.go
     
 deployment:
   development:
