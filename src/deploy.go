@@ -99,17 +99,26 @@ func shouldCompress(file string) bool {
 	return true
 }
 
-func uploadFile(bucket *s3.Bucket, reader io.Reader, dest string, includeHash bool, caching int) string {
+type UploadFileRequest struct {
+	Bucket       *s3.Bucket
+	Reader       io.Reader
+	Path         string
+	Dest         string
+	IncludeHash  bool
+	CacheSeconds int
+}
+
+func uploadFile(req UploadFileRequest) (remotePath string) {
 	buffer := bytes.NewBuffer([]byte{})
 
-	compress := shouldCompress(dest)
+	compress := shouldCompress(req.Path)
 
 	if compress {
 		writer := gzip.NewWriter(buffer)
-		must(io.Copy(writer, reader))
+		must(io.Copy(writer, req.Reader))
 		writer.Close()
 	} else {
-		must(io.Copy(buffer, reader))
+		must(io.Copy(buffer, req.Reader))
 	}
 
 	data := buffer.Bytes()
@@ -118,26 +127,28 @@ func uploadFile(bucket *s3.Bucket, reader io.Reader, dest string, includeHash bo
 	hashPrefix := fmt.Sprintf("%x", hash)[:12]
 	s3Opts := s3.Options{
 		ContentMD5:   base64.StdEncoding.EncodeToString(hash),
-		CacheControl: fmt.Sprintf("public, max-age=%d", caching),
+		CacheControl: fmt.Sprintf("public, max-age=%d", req.CacheSeconds),
 	}
 
 	if compress {
 		s3Opts.ContentEncoding = "gzip"
 	}
 
-	if includeHash {
+	dest := req.Path
+	if req.IncludeHash {
 		dest = hashPrefix + "_" + dest
 	}
+	dest = filepath.Join(req.Dest, dest)
 
-	log.Printf("Uploading to %s in %s (%s) [%d]\n", dest, bucket.Name, hashPrefix, caching)
+	log.Printf("Uploading to %s in %s (%s) [%d]\n", dest, req.Bucket.Name, hashPrefix, req.CacheSeconds)
 
 	op := func() error {
 		// We need to create a new reader each time, as we might be doing this more than once (if it fails)
-		return bucket.PutReader(dest, bytes.NewReader(data), int64(len(data)), guessContentType(dest)+"; charset=utf-8", s3.PublicRead, s3Opts)
+		return req.Bucket.PutReader(dest, bytes.NewReader(data), int64(len(data)), guessContentType(dest)+"; charset=utf-8", s3.PublicRead, s3Opts)
 	}
 
 	back := backoff.NewExponentialBackOff()
-	back.MaxElapsedTime = 2 * time.Minute
+	back.MaxElapsedTime = 30 * time.Second
 
 	err := backoff.RetryNotify(op, back, func(err error, next time.Duration) {
 		log.Println("Error uploading", err, "retrying in", next)
@@ -171,7 +182,23 @@ func writeFiles(options Options, includeHash bool, files chan *FileRef) {
 			ttl = LIMITED
 		}
 
-		(*file).UploadedPath = uploadFile(bucket, handle, file.RemotePath, includeHash, ttl)
+		remote := file.RemotePath
+		if strings.HasPrefix(remote, "/") {
+			remote = remote[1:]
+		}
+		partialPath, err := filepath.Rel(options.Dest, remote)
+		if err != nil {
+			panic(err)
+		}
+
+		(*file).UploadedPath = uploadFile(UploadFileRequest{
+			Bucket:       bucket,
+			Reader:       handle,
+			Path:         partialPath,
+			Dest:         options.Dest,
+			IncludeHash:  includeHash,
+			CacheSeconds: ttl,
+		})
 	}
 }
 
@@ -371,7 +398,13 @@ func deployHTML(options Options, id string, file HTMLFile) {
 	curPath := joinPath(options.Dest, internalPath)
 
 	bucket := s3Session.Bucket(options.Bucket)
-	uploadFile(bucket, strings.NewReader(data), permPath, false, FOREVER)
+	uploadFile(UploadFileRequest{
+		Bucket:       bucket,
+		Reader:       strings.NewReader(data),
+		Path:         permPath,
+		IncludeHash:  false,
+		CacheSeconds: FOREVER,
+	})
 
 	log.Println("Copying", permPath, "to", curPath)
 	copyFile(bucket, permPath, curPath, "text/html; charset=utf-8", LIMITED)
@@ -524,10 +557,28 @@ func Deploy(options Options) {
 				panic("Absolute base tags are not supported")
 			}
 
+			if strings.HasSuffix(base, "/") {
+				base = base[:len(base)-1]
+			}
+
 			htmlFiles[i] = HTMLFile{
 				File: *file,
 				Deps: make([]FileInst, len(paths)),
 				Base: base,
+			}
+
+			var dest string
+			if strings.HasPrefix(base, "/") && strings.HasPrefix(base, "/"+options.Dest) {
+				dest = base
+			} else {
+				dest = joinPath(options.Dest, base)
+			}
+
+			var root string
+			if strings.HasPrefix(base, "/") && strings.HasSuffix(options.Root, base) {
+				root = options.Root
+			} else {
+				root = joinPath(options.Root, base)
 			}
 
 			for j, path := range paths {
@@ -537,8 +588,8 @@ func Deploy(options Options) {
 					remote = joinPath(options.Dest, path)
 				} else {
 					if strings.HasPrefix(base, "/") {
-						local = joinPath(options.Root, base, path)
-						remote = joinPath(options.Dest, base, path)
+						local = joinPath(root, path)
+						remote = joinPath(dest, path)
 					} else {
 						local = joinPath(options.Root, rel, base, path)
 						remote = joinPath(options.Dest, rel, base, path)
