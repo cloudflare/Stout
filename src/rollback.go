@@ -18,7 +18,7 @@ func Rollback(options Options, version string) {
 		s3Session = openS3(options.AWSKey, options.AWSSecret, options.AWSRegion)
 	}
 
-	bucket := s3Session.Bucket(options.Bucket)
+	bucket := s3Session.Bucket(options.Domain)
 
 	prefix := filepath.Join(options.Dest, version) + "/"
 

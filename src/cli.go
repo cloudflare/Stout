@@ -16,13 +16,13 @@ Supports three commands: create, deploy and rollback.
 
 Example Usage:
  To create a site which will be hosted at my.awesome.website:
-   stout create --bucket my.awesome.website --key AWS_KEY --secret AWS_SECRET
+   stout create --domain my.awesome.website --key AWS_KEY --secret AWS_SECRET
 
  To deploy the current folder to the root of the my.awesome.website site:
-  stout deploy --bucket my.awesome.website --key AWS_KEY --secret AWS_SECRET
+  stout deploy --domain my.awesome.website --key AWS_KEY --secret AWS_SECRET
 
  To rollback to a specific deploy:
-  stout rollback --bucket my.awesome.website --key AWS_KEY --secret AWS_SECRET c4a22bf94de1
+  stout rollback --domain my.awesome.website --key AWS_KEY --secret AWS_SECRET c4a22bf94de1
 
  See the README for more configuration information.
  run stout help for all options"
@@ -39,7 +39,7 @@ type Options struct {
 	Dest       string `yaml:"dest"`
 	ConfigFile string `yaml:"-"`
 	Env        string `yaml:"-"`
-	Bucket     string `yaml:"bucket"`
+	Domain     string `yaml:"domain"`
 	AWSKey     string `yaml:"key"`
 	AWSSecret  string `yaml:"secret"`
 	AWSRegion  string `yaml:"region"`
@@ -59,7 +59,7 @@ func parseOptions() (o Options, set *flag.FlagSet) {
 	set.StringVar(&o.Dest, "dest", "./", "[deploy] The destination directory to write files to in the S3 bucket")
 	set.StringVar(&o.ConfigFile, "config", "", "A yaml file to read configuration from")
 	set.StringVar(&o.Env, "env", "", "The env to read from the config file")
-	set.StringVar(&o.Bucket, "bucket", "", "The bucket to deploy to, this should also be the domain you plan to use in Route53")
+	set.StringVar(&o.Domain, "domain", "", "The bucket to deploy to, this should also be the domain you plan to use in Route53")
 	set.StringVar(&o.AWSKey, "key", "", "The AWS key to use")
 	set.StringVar(&o.AWSSecret, "secret", "", "The AWS secret of the provided key")
 	set.StringVar(&o.AWSRegion, "region", "us-east-1", "The AWS region the S3 bucket is in")
@@ -79,8 +79,8 @@ func parseOptions() (o Options, set *flag.FlagSet) {
 * Checks if the bucket is specified and aws credentials supplied
  */
 func checkForBucketAndKeys(options Options) {
-	if options.Bucket == "" {
-		panic("You must specify a bucket")
+	if options.Domain == "" {
+		panic("You must specify a bucket (domain)")
 	}
 
 	if options.AWSKey == "" || options.AWSSecret == "" {

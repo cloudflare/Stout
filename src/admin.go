@@ -25,7 +25,7 @@ import (
 * set website index and error documents to index.html and error.html
  */
 func CreateBucket(options Options) error {
-	bucket := s3Session.Bucket(options.Bucket)
+	bucket := s3Session.Bucket(options.Domain)
 
 	err := bucket.PutBucket("public-read")
 	if err != nil {
@@ -33,8 +33,12 @@ func CreateBucket(options Options) error {
 	}
 
 	err = bucket.PutBucketWebsite(s3.WebsiteConfiguration{
-		IndexDocument: &s3.IndexDocument{"index.html"},
-		ErrorDocument: &s3.ErrorDocument{"index.html"},
+		IndexDocument: &s3.IndexDocument{
+			Suffix: "index.html",
+		},
+		ErrorDocument: &s3.ErrorDocument{
+			Key: "index.html",
+		},
 	})
 	if err != nil {
 		return err
@@ -50,7 +54,7 @@ func CreateBucket(options Options) error {
 						"AWS": "*"
 					},
 					"Action": "s3:GetObject",
-					"Resource": "arn:aws:s3:::` + options.Bucket + `/*"
+					"Resource": "arn:aws:s3:::` + options.Domain + `/*"
 				}
 			]
 		}`,
@@ -85,7 +89,7 @@ func GetDistribution(amazonSession *session.Session, options Options, certificat
 	//check for already existing distributions
 	for _, distSummary := range dists.DistributionList.Items {
 		for _, alias := range distSummary.Aliases.Items {
-			if *alias == options.Bucket {
+			if *alias == options.Domain {
 				//matching distribution found
 				fmt.Println("CloudFront distribution found with the provided bucket name, assuming config matches.")
 				fmt.Println("If you run into issues, delete the distribution and rerun this command.")
@@ -146,8 +150,8 @@ func GetDistribution(amazonSession *session.Session, options Options, certificat
 	}
 	params := &amazoncloudfront.CreateDistributionInput{
 		DistributionConfig: &amazoncloudfront.DistributionConfig{
-			CallerReference: amazonaws.String(options.Bucket),
-			Comment:         amazonaws.String(options.Bucket),
+			CallerReference: amazonaws.String(options.Domain),
+			Comment:         amazonaws.String(options.Domain),
 			DefaultCacheBehavior: &amazoncloudfront.DefaultCacheBehavior{
 				ForwardedValues: &amazoncloudfront.ForwardedValues{
 					Cookies: &amazoncloudfront.CookiePreference{
@@ -159,7 +163,7 @@ func GetDistribution(amazonSession *session.Session, options Options, certificat
 					},
 				},
 				MinTTL:         amazonaws.Int64(0),
-				TargetOriginId: amazonaws.String("S3-" + options.Bucket),
+				TargetOriginId: amazonaws.String("S3-" + options.Domain),
 				TrustedSigners: &amazoncloudfront.TrustedSigners{
 					Enabled:  amazonaws.Bool(false),
 					Quantity: amazonaws.Int64(0),
@@ -189,8 +193,8 @@ func GetDistribution(amazonSession *session.Session, options Options, certificat
 				Quantity: amazonaws.Int64(1),
 				Items: []*amazoncloudfront.Origin{
 					{
-						DomainName: amazonaws.String(options.Bucket + ".s3-website-" + options.AWSRegion + ".amazonaws.com"),
-						Id:         amazonaws.String("S3-" + options.Bucket),
+						DomainName: amazonaws.String(options.Domain + ".s3-website-" + options.AWSRegion + ".amazonaws.com"),
+						Id:         amazonaws.String("S3-" + options.Domain),
 						CustomHeaders: &amazoncloudfront.CustomHeaders{
 							Quantity: amazonaws.Int64(0),
 						},
@@ -213,7 +217,7 @@ func GetDistribution(amazonSession *session.Session, options Options, certificat
 			Aliases: &amazoncloudfront.Aliases{
 				Quantity: amazonaws.Int64(1),
 				Items: []*string{
-					amazonaws.String(options.Bucket),
+					amazonaws.String(options.Domain),
 				},
 			},
 			CacheBehaviors: &amazoncloudfront.CacheBehaviors{
@@ -267,14 +271,12 @@ func GetDistribution(amazonSession *session.Session, options Options, certificat
 * Create new IAM user upon using the 'create' command, '--no-user' flag disables this
  */
 func CreateUser(options Options) (key iam.AccessKey, err error) {
-	name := options.Bucket + "_deploy"
+	name := options.Domain + "_deploy"
 
 	_, err = iamSession.CreateUser(name, "/")
 	if err != nil {
 		iamErr, ok := err.(*iam.Error)
-		if ok && iamErr.Code == "EntityAlreadyExists" {
-			err = nil
-		} else {
+		if !ok || iamErr.Code != "EntityAlreadyExists" {
 			return
 		}
 	}
@@ -293,7 +295,7 @@ func CreateUser(options Options) (key iam.AccessKey, err error) {
 						"s3:GetObject"
 					],
 					"Resource": [
-						"arn:aws:s3:::`+options.Bucket+`", "arn:aws:s3:::`+options.Bucket+`/*"
+						"arn:aws:s3:::`+options.Domain+`", "arn:aws:s3:::`+options.Domain+`/*"
 					]
 				}
 			]
@@ -316,7 +318,7 @@ func CreateUser(options Options) (key iam.AccessKey, err error) {
  */
 func UpdateRoute(options Options, distDomainName string) error {
 	//get zone name
-	zoneName, err := publicsuffix.EffectiveTLDPlusOne(options.Bucket)
+	zoneName, err := publicsuffix.EffectiveTLDPlusOne(options.Domain)
 	if err != nil {
 		return err
 	}
@@ -343,10 +345,10 @@ func UpdateRoute(options Options, distDomainName string) error {
 
 	if zone == nil {
 		fmt.Printf("A Route 53 hosted zone was not found for %s\n", zoneName)
-		if zoneName != options.Bucket {
+		if zoneName != options.Domain {
 			// the bucket could not be found in route53 and is a subdomain
 			fmt.Println("If you would like to use Route 53 to manage your DNS, create a zone for this domain, and update your registrar's configuration to point to the DNS servers Amazon provides and rerun this command.  Note that you must copy any existing DNS configuration you have to Route 53 if you do not wish existing services hosted on this domain to stop working.")
-			fmt.Printf("If you would like to continue to use your existing DNS, create a CNAME record pointing %s to %s and the site setup will be finished.\n", options.Bucket, distDomainName)
+			fmt.Printf("If you would like to continue to use your existing DNS, create a CNAME record pointing %s to %s and the site setup will be finished.\n", options.Domain, distDomainName)
 		} else {
 			//the bucket is not a subdomain
 			// TODO(renandincer): Simplify this, it might be confusing to a user
@@ -357,7 +359,7 @@ func UpdateRoute(options Options, distDomainName string) error {
 		return nil
 	}
 
-	fmt.Printf("Adding %s to %s Route 53 zone\n", options.Bucket, zone.Name)
+	fmt.Printf("Adding %s to %s Route 53 zone\n", options.Domain, zone.Name)
 	parts := strings.Split(zone.Id, "/")
 	idValue := parts[2]
 
@@ -365,7 +367,7 @@ func UpdateRoute(options Options, distDomainName string) error {
 		Changes: []route53.Change{
 			route53.Change{
 				Action: "CREATE",
-				Name:   options.Bucket,
+				Name:   options.Domain,
 				Type:   "A",
 				AliasTarget: route53.AliasTarget{
 					HostedZoneId:         "Z2FDTNDATAQYW2", //cloudfront distribution
@@ -379,7 +381,7 @@ func UpdateRoute(options Options, distDomainName string) error {
 	if err != nil {
 		if strings.Contains(err.Error(), "it already exists") {
 			fmt.Println("Existing route found, assuming it is correct")
-			fmt.Printf("If you run into trouble, you may need to delete the %s route in Route53 and try again\n", options.Bucket)
+			fmt.Printf("If you run into trouble, you may need to delete the %s route in Route53 and try again\n", options.Domain)
 			return nil
 		}
 		return err
@@ -418,7 +420,7 @@ func findMatchingCertificate(options Options, acmService *acm.ACM) (string, erro
 			domainName := *certificate.DomainName
 
 			certificateARN := *certificate.CertificateArn
-			if domainName == options.Bucket {
+			if domainName == options.Domain {
 				tags, err := acmService.ListTagsForCertificate(&acm.ListTagsForCertificateInput{
 					CertificateArn: amazonaws.String(certificateARN),
 				})
@@ -454,18 +456,18 @@ func findMatchingCertificate(options Options, acmService *acm.ACM) (string, erro
 		}
 
 		//domain name exactly matches the cert name
-		if domainName == options.Bucket {
+		if domainName == options.Domain {
 			return certificateARN, nil
 		}
 
 		for _, certSAN := range certificateDetail.Certificate.SubjectAlternativeNames {
-			if *certSAN == options.Bucket {
+			if *certSAN == options.Domain {
 				return certificateARN, nil
 			}
 		}
 
 		//domain name falls under a wildcard domain
-		wildcardDomainTLDPlusOne, err := publicsuffix.EffectiveTLDPlusOne(options.Bucket)
+		wildcardDomainTLDPlusOne, err := publicsuffix.EffectiveTLDPlusOne(options.Domain)
 		if err != nil {
 			return "", err
 		}
@@ -512,11 +514,11 @@ func validateCertificate(acmService *acm.ACM, certificateARN string) error {
  */
 func requestCertificate(options Options, acmService *acm.ACM) ([]string, error) {
 	certificateReqResponse, err := acmService.RequestCertificate(&acm.RequestCertificateInput{
-		DomainName: amazonaws.String(options.Bucket),
+		DomainName: amazonaws.String(options.Domain),
 		DomainValidationOptions: []*acm.DomainValidationOption{
 			{
-				DomainName:       amazonaws.String(options.Bucket),
-				ValidationDomain: amazonaws.String(options.Bucket),
+				DomainName:       amazonaws.String(options.Domain),
+				ValidationDomain: amazonaws.String(options.Domain),
 			},
 		},
 	})
@@ -701,7 +703,8 @@ func Create(options Options) {
 		}
 
 		fmt.Println("An access key has been created with just the permissions required to deploy / rollback this site")
-		fmt.Println("It is strongly recommended you use this limited account to deploy this project in the future\n")
+		fmt.Println("It is strongly recommended you use this limited account to deploy this project in the future")
+		fmt.Println()
 		fmt.Printf("ACCESS_KEY_ID=%s\n", key.Id)
 		fmt.Printf("ACCESS_KEY_SECRET=%s\n\n", key.Secret)
 
@@ -717,8 +720,8 @@ can add them as environment variables and pass those variables to the deploy
 commands (see the README).
 
 Your first deploy command might be:
-	
-	stout deploy --bucket ` + options.Bucket + ` --key ` + key.Id + ` --secret '` + key.Secret + `'
+
+	stout deploy --domain ` + options.Domain + ` --key ` + key.Id + ` --secret '` + key.Secret + `'
 `)
 		}
 
