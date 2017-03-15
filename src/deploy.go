@@ -198,7 +198,7 @@ type FileInst struct {
 * Open files and pass the handle to uploadFile function
  */
 func writeFiles(options Options, includeHash bool, files chan *FileRef) {
-	bucket := s3Session.Bucket(options.Bucket)
+	bucket := s3Session.Bucket(options.Domain)
 
 	for file := range files {
 		handle := must(os.Open(file.LocalPath)).(*os.File)
@@ -455,7 +455,7 @@ func deployHTML(options Options, id string, file HTMLFile) {
 	permPath := joinPath(options.Dest, id, internalPath)
 	curPath := joinPath(options.Dest, internalPath)
 
-	bucket := s3Session.Bucket(options.Bucket)
+	bucket := s3Session.Bucket(options.Domain)
 	uploadFile(UploadFileRequest{
 		Bucket:       bucket,
 		Reader:       strings.NewReader(data),
