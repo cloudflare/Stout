@@ -27,7 +27,7 @@ func Create(c *cli.Context) error {
 		return err
 	}
 
-	if err := dnsProviderTyped.CreateDNS(*c); err != nil {
+	if err := dnsProviderTyped.CreateDNS(*c, ""); err != nil {
 		return err
 	}
 

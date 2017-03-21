@@ -1,4 +1,4 @@
-package amazonprovider
+package cdn
 
 import (
 	"errors"
