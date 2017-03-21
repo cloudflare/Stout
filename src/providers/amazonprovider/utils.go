@@ -34,9 +34,6 @@ var cfSession *cloudfront.CloudFront
 
 var awsSession *session.Session
 
-/*
-* Check is the specified region is a valid region
- */
 func getRegion(region string) aws.Region {
 	regionS, ok := aws.Regions[region]
 	if !ok {
@@ -45,9 +42,6 @@ func getRegion(region string) aws.Region {
 	return regionS
 }
 
-/*
-*	Open a new S3 connection
- */
 func openS3(key, secret, region string) *s3.S3 {
 	regionS := getRegion(region)
 
@@ -58,9 +52,6 @@ func openS3(key, secret, region string) *s3.S3 {
 	return s3.New(auth, regionS)
 }
 
-/*
-*	Open a new IAM connection
- */
 func openIAM(key, secret, region string) *iam.IAM {
 	regionS := getRegion(region)
 
@@ -71,9 +62,6 @@ func openIAM(key, secret, region string) *iam.IAM {
 	return iam.New(auth, regionS)
 }
 
-/*
-*	Open a new CF connection
- */
 func openCloudFront(key, secret string) *cloudfront.CloudFront {
 	auth := aws.Auth{
 		AccessKey: key,
@@ -82,9 +70,6 @@ func openCloudFront(key, secret string) *cloudfront.CloudFront {
 	return cloudfront.NewCloudFront(auth)
 }
 
-/*
-*	Open a new Route53 connection
- */
 func openRoute53(key, secret string) *route53.Route53 {
 	auth := aws.Auth{
 		AccessKey: key,

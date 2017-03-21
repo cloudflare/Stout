@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/eagerio/Stout/src/actions"
+	"github.com/eagerio/Stout/src/providers"
 	"github.com/urfave/cli"
 )
 
@@ -70,7 +72,10 @@ type Options struct {
 func main() {
 	app := cli.NewApp()
 	app.Name = "stout"
+	app.Version = "2.0.0"
 	app.Usage = "a reliable static website deploy tool"
+	app.UsageText = "stout [global options] <command> [command options], or" + "\n" +
+		"   stout help <command>, to learn more about a subcommand"
 
 	// addAWSConfig(&options)
 	// checkForRequiredOptions(options)
@@ -89,37 +94,55 @@ func main() {
 		cli.StringFlag{
 			Name:  "domain",
 			Value: "",
-			Usage: "The domain to deploy to, this should be used in route53 ",
+			Usage: "The domain to deploy to",
+		},
+		cli.StringFlag{
+			Name:  "dns",
+			Value: "",
+			Usage: "The DNS provider to use",
+		},
+		cli.StringFlag{
+			Name:  "fs",
+			Value: "",
+			Usage: "The file storage provider to use",
+		},
+		cli.StringFlag{
+			Name:  "cdn",
+			Value: "",
+			Usage: "The CDN provider to use",
 		},
 	}
+
 	app.Commands = []cli.Command{
 		{
 			Name:  "create",
 			Usage: "Configure your CDN, File Storage, and DNS providers for usage with stout.",
-			Action: func(c *cli.Context) error {
-				createSubcommand := cli.NewApp()
-				createSubcommand.Flags = []cli.Flag{
-					cli.BoolFlag{
-						Name:  "no-user",
-						Usage: "Should a seperate IAM user be created for this bucket and distribution?",
-					},
-					cli.BoolFlag{
-						Name:  "create-ssl",
-						Usage: "Request a SSL/TLS certificate to support https. Using this command will require email validation to prove you own this domain",
-					},
-					cli.BoolFlag{
-						Name:  "no-ssl",
-						Usage: "Do not set up SSL/TLS certificates",
-					},
-				}
+			Flags: append([]cli.Flag{
+				cli.BoolFlag{
+					Name:  "no-user",
+					Usage: "Should a seperate IAM user be created for this bucket and distribution?",
+				},
+				cli.BoolFlag{
+					Name:  "create-ssl",
+					Usage: "Request a SSL/TLS certificate to support https. Using this command will require email validation to prove you own this domain",
+				},
+				cli.BoolFlag{
+					Name:  "no-ssl",
+					Usage: "Do not set up SSL/TLS certificates",
+				},
+			}, providers.CommandFlags(true, true, true)...),
+			Action: func(c *cli.Context) (err error) {
+				defer func() {
+					if r := recover(); r != nil {
+						var ok bool
+						err, ok = r.(error)
+						if !ok {
+							err = fmt.Errorf("%v", r)
+						}
+					}
+				}()
 
-				createSubcommand.Action = func(c *cli.Context) error {
-					// Create()
-					return nil
-				}
-
-				createSubcommand.RunAsSubcommand(c)
-				return nil
+				return actions.Create(c)
 			},
 		},
 		{
@@ -131,17 +154,17 @@ func main() {
 					cli.StringFlag{
 						Name:  "files",
 						Value: "*",
-						Usage: "[deploy] Comma-seperated glob patterns of files to deploy (within root) independently from html referenced js and css files",
+						Usage: "Comma-seperated glob patterns of files to deploy (within root) independently from html referenced js and css files",
 					},
 					cli.StringFlag{
 						Name:  "root",
 						Value: "./",
-						Usage: "[deploy] The local directory (prefix) to deploy",
+						Usage: "The local directory (prefix) to deploy",
 					},
 					cli.StringFlag{
 						Name:  "dest",
 						Value: "./",
-						Usage: "[deploy] The destination directory to write files to in the S3 bucket",
+						Usage: "The destination directory to write files to in the S3 bucket",
 					},
 				}
 
@@ -170,9 +193,12 @@ func main() {
 	}
 
 	app.CommandNotFound = func(c *cli.Context, command string) {
-		fmt.Fprintf(c.App.Writer, "stout: %q is not recognized as a valid command.\n", command)
+		fmt.Fprintf(c.App.Writer, "stout error: %q is not recognized as a valid command.\n", command)
 	}
 	// app.Before = altsrc.InitInputSourceWithContext(flags, altsrc.NewYamlSourceFromFlagFunc("config"))
 
-	app.Run(os.Args)
+	err := app.Run(os.Args)
+	if err != nil {
+		fmt.Printf("stout error: %s\n", err.Error())
+	}
 }
