@@ -1,33 +1,35 @@
 package providers
 
-import "github.com/eagerio/Stout/src/providers/amazonprovider"
-
-type ProviderHolder struct {
-	DNSProvider
-	FSProvider
-	CDNProvider
-}
-
-var ProviderList = map[string]ProviderClient{
-	amazonprovider.Client.Name(): &amazonprovider.Client,
-}
+import "github.com/urfave/cli"
 
 type ProviderClient interface {
 	Name() string
-	SetFlags()
-	ValidateSettings() error
+	Flags() []cli.Flag
+	ValidateSettings(cli.Context) error
 }
 
 type DNSProvider interface {
-	CreateDNS() error
+	CreateDNS(cli.Context) error
+
+	Name() string
+	Flags() []cli.Flag
+	ValidateSettings(cli.Context) error
 }
 
 type FSProvider interface {
-	CreateFS() error
-	DeployFS() error
-	RollbackFS() error
+	CreateFS(cli.Context) error
+	DeployFS(cli.Context) error
+	RollbackFS(cli.Context) error
+
+	Name(cli.Context) string
+	Flags() []cli.Flag
+	ValidateSettings(cli.Context) error
 }
 
 type CDNProvider interface {
-	CreateCDN() error
+	CreateCDN(cli.Context) error
+
+	Name() string
+	Flags() []cli.Flag
+	ValidateSettings(cli.Context) error
 }
