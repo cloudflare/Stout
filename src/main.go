@@ -119,10 +119,6 @@ func main() {
 			Usage: "Configure your CDN, File Storage, and DNS providers for usage with stout.",
 			Flags: append([]cli.Flag{
 				cli.BoolFlag{
-					Name:  "no-user",
-					Usage: "Should a seperate IAM user be created for this bucket and distribution?",
-				},
-				cli.BoolFlag{
 					Name:  "create-ssl",
 					Usage: "Request a SSL/TLS certificate to support https. Using this command will require email validation to prove you own this domain",
 				},

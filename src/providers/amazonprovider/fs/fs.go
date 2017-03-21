@@ -6,10 +6,10 @@ import (
 )
 
 // Create new IAM user upon using the 'create' command, '--no-user' flag disables this
-func CreateS3User(domain string) (key iam.AccessKey, err error) {
+func CreateS3User(iamSession *iam.IAM, domain string) (key iam.AccessKey, err error) {
 	name := domain + "_deploy"
 
-	_, err = IamSession.CreateUser(name, "/")
+	_, err = iamSession.CreateUser(name, "/")
 	if err != nil {
 		iamErr, ok := err.(*iam.Error)
 		if !ok || iamErr.Code != "EntityAlreadyExists" {
@@ -18,7 +18,7 @@ func CreateS3User(domain string) (key iam.AccessKey, err error) {
 	}
 
 	// user policy that only allows access to the specified bucket
-	_, err = IamSession.PutUserPolicy(name, name, `{
+	_, err = iamSession.PutUserPolicy(name, name, `{
 			"Version": "2012-10-17",
 			"Statement": [
 				{
@@ -41,7 +41,7 @@ func CreateS3User(domain string) (key iam.AccessKey, err error) {
 		return
 	}
 
-	keyResp, err := IamSession.CreateAccessKey(name)
+	keyResp, err := iamSession.CreateAccessKey(name)
 	if err != nil {
 		return
 	}
@@ -49,8 +49,8 @@ func CreateS3User(domain string) (key iam.AccessKey, err error) {
 	return keyResp.AccessKey, nil
 }
 
-func CreateS3Bucket(domain string) error {
-	bucket := S3Session.Bucket(domain)
+func CreateS3Bucket(s3Session *s3.S3, domain string) error {
+	bucket := s3Session.Bucket(domain)
 
 	err := bucket.PutBucket("public-read")
 	if err != nil {

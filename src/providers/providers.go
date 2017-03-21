@@ -9,7 +9,7 @@ type ProviderClient interface {
 }
 
 type DNSProvider interface {
-	CreateDNS(cli.Context) error
+	CreateDNS(cli.Context, string) error
 
 	Name() string
 	Flags() []cli.Flag
