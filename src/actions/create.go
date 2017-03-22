@@ -9,25 +9,50 @@ import (
 )
 
 func Create(c *cli.Context) error {
-	dnsString := c.GlobalString("dns")
 	fsString := c.GlobalString("fs")
 	cdnString := c.GlobalString("cdn")
+	dnsString := c.GlobalString("dns")
 
-	if dnsString == "" || fsString == "" || cdnString == "" {
+	if fsString == "" || cdnString == "" || dnsString == "" {
 		return errors.New("The --dns, --fs, and --cdn flags and values are required for the `create` command")
 	}
 
+	err, fsProvider := providers.ValidateProviderType(fsString, providers.FS_PROVIDER_TYPE)
+	if err != nil {
+		return err
+	}
+	err, cdnProvider := providers.ValidateProviderType(cdnString, providers.CDN_PROVIDER_TYPE)
+	if err != nil {
+		return err
+	}
 	err, dnsProvider := providers.ValidateProviderType(dnsString, providers.DNS_PROVIDER_TYPE)
 	if err != nil {
 		return err
 	}
 
+	fsProviderTyped, _ := fsProvider.(providers.FSProvider)
+	if err := fsProviderTyped.ValidateSettings(*c); err != nil {
+		return err
+	}
+	cdnProviderTyped, _ := cdnProvider.(providers.CDNProvider)
+	if err := cdnProviderTyped.ValidateSettings(*c); err != nil {
+		return err
+	}
 	dnsProviderTyped, _ := dnsProvider.(providers.DNSProvider)
 	if err := dnsProviderTyped.ValidateSettings(*c); err != nil {
 		return err
 	}
 
-	if err := dnsProviderTyped.CreateDNS(*c, ""); err != nil {
+	// during the create phase, the domain name for the cdn
+	// needs to be provided to the dns
+	if err := fsProviderTyped.CreateFS(*c); err != nil {
+		return err
+	}
+	cdnDomain, err := cdnProviderTyped.CreateCDN(*c)
+	if err != nil {
+		return err
+	}
+	if err := dnsProviderTyped.CreateDNS(*c, cdnDomain); err != nil {
 		return err
 	}
 
