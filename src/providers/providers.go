@@ -27,7 +27,7 @@ type FSProvider interface {
 }
 
 type CDNProvider interface {
-	CreateCDN(cli.Context) error
+	CreateCDN(cli.Context) (string, error)
 
 	Name() string
 	Flags() []cli.Flag
