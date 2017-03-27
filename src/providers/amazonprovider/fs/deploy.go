@@ -106,13 +106,8 @@ type FileInst struct {
 	InstPath string
 }
 
-const (
-	LIMITED = 60
-	FOREVER = 31556926
-)
-
 // Open files and pass the handle to uploadFile function
-func writeFiles(s3Session *s3.S3, domain string, dest string, remote string, includeHash bool, files chan *FileRef) {
+func writeFiles(s3Session *s3.S3, domain string, dest string, includeHash bool, files chan *FileRef) {
 	bucket := s3Session.Bucket(domain)
 
 	for file := range files {
@@ -147,14 +142,14 @@ func writeFiles(s3Session *s3.S3, domain string, dest string, remote string, inc
 }
 
 // Deploy/upload files consurently
-func deployFiles(s3Session *s3.S3, domain string, dest string, remote string, includeHash bool, files []*FileRef) {
+func deployFiles(s3Session *s3.S3, domain string, dest string, includeHash bool, files []*FileRef) {
 	ch := make(chan *FileRef)
 
 	wg := new(sync.WaitGroup)
 	for i := 0; i < UPLOAD_WORKERS; i++ {
 		wg.Add(1)
 		go func() {
-			writeFiles(s3Session, domain, dest, remote, includeHash, ch)
+			writeFiles(s3Session, domain, dest, includeHash, ch)
 			wg.Done()
 		}()
 	}
@@ -476,7 +471,7 @@ func (f HTMLFile) GetLocalPath() string {
 }
 
 // Deploy main function
-func Deploy(s3Session *s3.S3, domain string, root string, files string, dest string, remote string) error {
+func Deploy(s3Session *s3.S3, domain string, root string, files string, dest string) error {
 	// list all files that match the glob pattern in the root
 	fileObjects := listFiles(root, files, dest)
 
@@ -594,10 +589,10 @@ func Deploy(s3Session *s3.S3, domain string, root string, files string, dest str
 		hash := hashFiles(hashPaths)
 		id = hash[:12] //this will go to the html folder
 
-		deployFiles(s3Session, domain, dest, remote, true, inclFileList)
+		deployFiles(s3Session, domain, dest, true, inclFileList)
 	}
 	//deploy all files requested except the html files
-	deployFiles(s3Session, domain, dest, remote, false, ignoreFiles(fileObjects, htmlFileRefs))
+	deployFiles(s3Session, domain, dest, false, ignoreFiles(fileObjects, htmlFileRefs))
 
 	//deploy html
 	if len(htmlFileRefs) != 0 {

@@ -3,35 +3,14 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/eagerio/Stout/src/actions"
 	"github.com/eagerio/Stout/src/providers"
+	"github.com/eagerio/Stout/src/types"
+	"github.com/eagerio/Stout/src/utils"
 	"github.com/urfave/cli"
 )
-
-/*
-* Prints a brief description of the usage of the tool
- */
-func printUsageDescription() {
-	fmt.Println(
-		`Stout Static Deploy Tool
-Supports three commands: create, deploy and rollback.
-
-Example Usage:
- To create a site which will be hosted at my.awesome.website:
-   stout create --domain my.awesome.website --key AWS_KEY --secret AWS_SECRET
-
- To deploy the current folder to the root of the my.awesome.website site:
-  stout deploy --domain my.awesome.website --key AWS_KEY --secret AWS_SECRET
-
- To rollback to a specific deploy:
-  stout rollback --domain my.awesome.website --key AWS_KEY --secret AWS_SECRET c4a22bf94de1
-
- See the README for more configuration information.
- run stout help for all options"
-
-`)
-}
 
 type Options struct {
 	Files       string `yaml:"files"`
@@ -51,139 +30,149 @@ type Options struct {
 	AWSRegion   string `yaml:"region"`
 }
 
-// set.StringVar(&o.DNSProvider, "dns", "", "The DNS provider to use")
-// set.StringVar(&o.FSProvider, "file-storage", "", "The file storage provider to use")
-// set.StringVar(&o.CDNProvider, "cdn", "", "The CDN provider to use")
+func formattedUsageText() string {
+	text := (`
+stout [global options] <command> [command options], or
+stout help <command>, to learn more about a subcommand
 
-// func checkForRequiredOptions(options Options) {
-// 	if options.Domain == "" {
-// 		panic("You must specify a domain")
-// 	}
-//
-// 	if !validProviders[options.DNSProvider] || !validProviders[options.FSProvider] || !validProviders[options.CDNProvider] {
-// 		panic("You must specify a valid DNS, file storage, and CDN provider")
-// 	}
-//
-// 	if options.AWSKey == "" || options.AWSSecret == "" {
-// 		panic("You must specify your AWS credentials")
-// 	}
-// }
+Example Usage:
+
+To create a site which will be hosted at my.awesome.website:
+  stout --fs amazon --cdn amazon --dns amazon create --domain my.awesome.website --key AWS_KEY --secret AWS_SECRET
+
+To deploy the current folder to the root of the my.awesome.website site:
+  stout --fs amazon deploy --domain my.awesome.website --key AWS_KEY --secret AWS_SECRET
+
+To rollback to a specific deploy:
+  stout --fs amazon rollback --domain my.awesome.website --key AWS_KEY --secret AWS_SECRET c4a22bf94de1
+ `)
+
+	textArray := strings.Split(text, "\n")
+	formattedText := strings.Join(textArray[1:], "\n   ")
+
+	return formattedText
+}
 
 func main() {
+	var globalFlagHolder types.GlobalFlags
+	var createFlagHolder types.CreateFlags
+	var deployFlagHolder types.DeployFlags
+	var rollbackFlagHolder types.RollbackFlags
+
 	app := cli.NewApp()
 	app.Name = "stout"
 	app.Version = "2.0.0"
 	app.Usage = "a reliable static website deploy tool"
-	app.UsageText = "stout [global options] <command> [command options], or" + "\n" +
-		"   stout help <command>, to learn more about a subcommand"
-
-	// addAWSConfig(&options)
-	// checkForRequiredOptions(options)
-
+	app.UsageText = formattedUsageText()
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name:  "config",
-			Value: "",
-			Usage: "A yaml file to read configuration from",
+			Name:        "config",
+			Value:       "",
+			Usage:       "A yaml file to read configuration from",
+			Destination: &globalFlagHolder.Config,
 		},
 		cli.StringFlag{
-			Name:  "env",
-			Value: "",
-			Usage: "The env to read from the config file",
+			Name:        "env",
+			Value:       "",
+			Usage:       "The env to read from the config file",
+			Destination: &globalFlagHolder.Env,
 		},
 		cli.StringFlag{
-			Name:  "domain",
-			Value: "",
-			Usage: "The domain to deploy to",
+			Name:        "domain",
+			Value:       "",
+			Usage:       "The domain to deploy to",
+			Destination: &globalFlagHolder.Domain,
 		},
 		cli.StringFlag{
-			Name:  "dns",
-			Value: "",
-			Usage: "The DNS provider to use",
+			Name:        "dns",
+			Value:       "",
+			Usage:       "The DNS provider to use",
+			Destination: &globalFlagHolder.DNS,
 		},
 		cli.StringFlag{
-			Name:  "fs",
-			Value: "",
-			Usage: "The file storage provider to use",
+			Name:        "fs",
+			Value:       "",
+			Usage:       "The file storage provider to use",
+			Destination: &globalFlagHolder.FS,
 		},
 		cli.StringFlag{
-			Name:  "cdn",
-			Value: "",
-			Usage: "The CDN provider to use",
+			Name:        "cdn",
+			Value:       "",
+			Usage:       "The CDN provider to use",
+			Destination: &globalFlagHolder.CDN,
 		},
 	}
-
 	app.Commands = []cli.Command{
 		{
 			Name:  "create",
 			Usage: "Configure your CDN, File Storage, and DNS providers for usage with stout.",
 			Flags: append([]cli.Flag{
 				cli.BoolFlag{
-					Name:  "create-ssl",
-					Usage: "Request a SSL/TLS certificate to support https. Using this command will require email validation to prove you own this domain",
+					Name:        "create-ssl",
+					Usage:       "Request a SSL/TLS certificate to support https. Using this command will require email validation to prove you own this domain",
+					Destination: &createFlagHolder.CreateSSL,
 				},
 				cli.BoolFlag{
-					Name:  "no-ssl",
-					Usage: "Do not set up SSL/TLS certificates",
+					Name:        "no-ssl",
+					Usage:       "Do not set up SSL/TLS certificates",
+					Destination: &createFlagHolder.NoSSL,
 				},
-			}, providers.CommandFlags(true, true, true)...),
+			}, providers.CreateCommandFlags()...),
 			Action: func(c *cli.Context) (err error) {
-				defer func() {
-					if r := recover(); r != nil {
-						var ok bool
-						err, ok = r.(error)
-						if !ok {
-							err = fmt.Errorf("%v", r)
-						}
-					}
-				}()
-
-				return actions.Create(c)
+				return utils.PanicsToErrors(func() error {
+					return actions.Create(globalFlagHolder, createFlagHolder)
+				})
 			},
 		},
 		{
 			Name:  "deploy",
 			Usage: "Deploy your static website to your File Storage provider.",
-			Action: func(c *cli.Context) error {
-				deploySubcommand := cli.NewApp()
-				deploySubcommand.Flags = []cli.Flag{
-					cli.StringFlag{
-						Name:  "files",
-						Value: "*",
-						Usage: "Comma-seperated glob patterns of files to deploy (within root) independently from html referenced js and css files",
-					},
-					cli.StringFlag{
-						Name:  "root",
-						Value: "./",
-						Usage: "The local directory (prefix) to deploy",
-					},
-					cli.StringFlag{
-						Name:  "dest",
-						Value: "./",
-						Usage: "The destination directory to write files to in the S3 bucket",
-					},
-				}
-
-				deploySubcommand.Action = func(c *cli.Context) error {
-					// Deploy()
-					return nil
-				}
-
-				return deploySubcommand.RunAsSubcommand(c)
+			Flags: append([]cli.Flag{
+				cli.StringFlag{
+					Name:        "files",
+					Value:       "*",
+					Usage:       "Comma-seperated glob patterns of files to deploy (within root) independently from html referenced js and css files",
+					Destination: &deployFlagHolder.Files,
+				},
+				cli.StringFlag{
+					Name:        "root",
+					Value:       "./",
+					Usage:       "The local directory (prefix) to deploy",
+					Destination: &deployFlagHolder.Root,
+				},
+				cli.StringFlag{
+					Name:        "dest",
+					Value:       "./",
+					Usage:       "The destination directory to write files to in the FS storage location",
+					Destination: &deployFlagHolder.Dest,
+				},
+			}, providers.DeployCommandFlags()...),
+			Action: func(c *cli.Context) (err error) {
+				return utils.PanicsToErrors(func() error {
+					return actions.Deploy(globalFlagHolder, deployFlagHolder)
+				})
 			},
 		},
 		{
 			Name:  "rollback",
 			Usage: "Roll back your website to a specific version.",
-			Action: func(c *cli.Context) error {
-				version := c.Args().First()
-				if version == "" {
-					panic("You must specify a version to rollback to")
-				}
-
-				// Rollback()
-
-				return nil
+			Flags: append([]cli.Flag{
+				cli.StringFlag{
+					Name:        "dest",
+					Value:       "./",
+					Usage:       "The destination directory to write files to in the FS storage location",
+					Destination: &rollbackFlagHolder.Dest,
+				},
+				cli.StringFlag{
+					Name:        "version",
+					Usage:       "The version to rollback to (the version should be the output of the deploy you wish to rollback to)",
+					Destination: &rollbackFlagHolder.Version,
+				},
+			}, providers.RollbackCommandFlags()...),
+			Action: func(c *cli.Context) (err error) {
+				return utils.PanicsToErrors(func() error {
+					return actions.Rollback(globalFlagHolder, rollbackFlagHolder)
+				})
 			},
 		},
 	}
