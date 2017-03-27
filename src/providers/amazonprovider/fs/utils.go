@@ -15,6 +15,11 @@ import (
 	"github.com/zackbloom/goamz/s3"
 )
 
+const (
+	LIMITED = 60
+	FOREVER = 31556926
+)
+
 // Catch errors and panic if there is an error
 func panicIf(err error) {
 	if err != nil {

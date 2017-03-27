@@ -48,15 +48,15 @@ func (a *client) Flags() []cli.Flag {
 	}
 }
 
-func (a *client) ValidateSettings(c cli.Context) error {
-	if c.String("key") == "" {
-		return errors.New("Missing AWS key flag")
+func (a *client) ValidateSettings() error {
+	if a.AWSKey == "" {
+		return errors.New("Missing aws-key flag")
 	}
-	if c.String("secret") == "" {
-		return errors.New("Missing AWS secret flag")
+	if a.AWSSecret == "" {
+		return errors.New("Missing aws-secret flag")
 	}
-	if c.String("region") == "" {
-		return errors.New("Missing AWS region flag")
+	if a.AWSRegion == "" {
+		return errors.New("Missing aws-region flag")
 	}
 
 	err := checkForAWS()

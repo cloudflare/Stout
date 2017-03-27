@@ -10,15 +10,13 @@ import (
 	"github.com/eagerio/Stout/src/providers/amazonprovider/cdn"
 	"github.com/eagerio/Stout/src/providers/amazonprovider/dns"
 	"github.com/eagerio/Stout/src/providers/amazonprovider/fs"
-	"github.com/urfave/cli"
+	"github.com/eagerio/Stout/src/types"
 )
 
 // Create a route53 route
-func (a *client) CreateDNS(c cli.Context, cdnDomainName string) error {
-	domain := c.GlobalString("domain")
-
+func (a *client) CreateDNS(g types.GlobalFlags, c types.CreateFlags, cdnDomainName string) error {
 	fmt.Println("Adding Route")
-	err := dns.UpdateR53Route(r53Session, domain, cdnDomainName)
+	err := dns.UpdateR53Route(r53Session, g.Domain, cdnDomainName)
 	if err != nil {
 		return errors.New("Error adding route to Route53 DNS config\n" + err.Error())
 	}
@@ -27,17 +25,15 @@ func (a *client) CreateDNS(c cli.Context, cdnDomainName string) error {
 }
 
 // Create a new s3 bucket, optionally create a new user
-func (a *client) CreateFS(c cli.Context) error {
-	domain := c.GlobalString("domain")
-
+func (a *client) CreateFS(g types.GlobalFlags, c types.CreateFlags) error {
 	fmt.Println("Creating Bucket")
-	err := fs.CreateS3Bucket(s3Session, domain)
+	err := fs.CreateS3Bucket(s3Session, g.Domain)
 	if err != nil {
 		return errors.New("Error creating S3 bucket\n" + err.Error())
 	}
 
 	if a.AWSNewUser {
-		key, err := fs.CreateS3User(iamSession, domain)
+		key, err := fs.CreateS3User(iamSession, g.Domain)
 		if err != nil {
 			return errors.New("Error creating user\n" + err.Error())
 		}
@@ -61,7 +57,7 @@ func (a *client) CreateFS(c cli.Context) error {
 
 	Your first deploy command might be:
 
-		stout deploy --domain ` + domain + ` --key ` + key.Id + ` --secret '` + key.Secret + `'
+		stout deploy --domain ` + g.Domain + ` --key ` + key.Id + ` --secret '` + key.Secret + `'
 	`)
 		}
 
@@ -71,13 +67,9 @@ func (a *client) CreateFS(c cli.Context) error {
 }
 
 // Create a new CloudFront distrbution
-func (a *client) CreateCDN(c cli.Context) (string, error) {
-	domain := c.GlobalString("domain")
-	createSSL := c.Bool("create-ssl")
-	noSSL := c.Bool("no-ssl")
-
+func (a *client) CreateCDN(g types.GlobalFlags, c types.CreateFlags) (string, error) {
 	fmt.Println("Checking for available SSL/TLS certificates")
-	certificateARN, err := setUpSSL(awsSession, domain, createSSL, noSSL)
+	certificateARN, err := setUpSSL(awsSession, g.Domain, c.CreateSSL, c.NoSSL)
 	if err != nil {
 		return "", errors.New("Error while processing SSL/TLS certificates\n" + err.Error())
 	}
@@ -87,10 +79,20 @@ func (a *client) CreateCDN(c cli.Context) (string, error) {
 	}
 
 	fmt.Println("Loading/Creating CloudFront Distribution")
-	cdnDomainName, err := cdn.GetCFDistribution(awsSession, certificateARN, createSSL, domain, a.AWSRegion)
+	cdnDomainName, err := cdn.GetCFDistribution(awsSession, certificateARN, c.CreateSSL, g.Domain, a.AWSRegion)
 	if err != nil {
 		return "", errors.New("Error loading/creating CloudFront distribution\n" + err.Error())
 	}
 
 	return cdnDomainName, nil
+}
+
+// Deploy a new version
+func (a *client) DeployFS(g types.GlobalFlags, d types.DeployFlags) error {
+	return fs.Deploy(s3Session, g.Domain, d.Root, d.Files, d.Dest)
+}
+
+// Deploy a new version
+func (a *client) RollbackFS(g types.GlobalFlags, r types.RollbackFlags) error {
+	return fs.Rollback(s3Session, g.Domain, r.Dest, r.Version)
 }

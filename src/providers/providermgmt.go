@@ -20,7 +20,19 @@ var providerList = map[string]ProviderClient{
 	amazonprovider.Client.Name(): &amazonprovider.Client,
 }
 
-func CommandFlags(dns bool, fs bool, cdn bool) (flags []cli.Flag) {
+func CreateCommandFlags() []cli.Flag {
+	return commandFlags(true, true, true)
+}
+
+func DeployCommandFlags() []cli.Flag {
+	return commandFlags(false, true, false)
+}
+
+func RollbackCommandFlags() []cli.Flag {
+	return commandFlags(false, true, false)
+}
+
+func commandFlags(dns bool, fs bool, cdn bool) (flags []cli.Flag) {
 	for _, provider := range providerList {
 		addFlags := false
 
@@ -56,24 +68,19 @@ func ValidateProviderType(str string, providerType providerConst) (error, Provid
 		return errors.New(fmt.Sprintf("%q is not a supported provider (was attempted to be used as a %s provider)", str, providerType)), nil
 	}
 
-	switch possibleProvider.(type) {
-	case DNSProvider:
-		if providerType == DNS_PROVIDER_TYPE {
-			if _, ok := possibleProvider.(DNSProvider); ok {
-				return nil, possibleProvider
-			}
+	if providerType == FS_PROVIDER_TYPE {
+		if _, ok := possibleProvider.(FSProvider); ok {
+			return nil, possibleProvider
 		}
-	case FSProvider:
-		if providerType == FS_PROVIDER_TYPE {
-			if _, ok := possibleProvider.(FSProvider); ok {
-				return nil, possibleProvider
-			}
+	}
+	if providerType == DNS_PROVIDER_TYPE {
+		if _, ok := possibleProvider.(DNSProvider); ok {
+			return nil, possibleProvider
 		}
-	case CDNProvider:
-		if providerType == CDN_PROVIDER_TYPE {
-			if _, ok := possibleProvider.(CDNProvider); ok {
-				return nil, possibleProvider
-			}
+	}
+	if providerType == CDN_PROVIDER_TYPE {
+		if _, ok := possibleProvider.(CDNProvider); ok {
+			return nil, possibleProvider
 		}
 	}
 

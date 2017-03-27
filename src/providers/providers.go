@@ -1,35 +1,38 @@
 package providers
 
-import "github.com/urfave/cli"
+import (
+	"github.com/eagerio/Stout/src/types"
+	"github.com/urfave/cli"
+)
 
 type ProviderClient interface {
 	Name() string
 	Flags() []cli.Flag
-	ValidateSettings(cli.Context) error
+	ValidateSettings() error
 }
 
 type DNSProvider interface {
-	CreateDNS(cli.Context, string) error
+	CreateDNS(g types.GlobalFlags, c types.CreateFlags, cdnDomain string) error
 
 	Name() string
 	Flags() []cli.Flag
-	ValidateSettings(cli.Context) error
+	ValidateSettings() error
 }
 
 type FSProvider interface {
-	CreateFS(cli.Context) error
-	DeployFS(cli.Context) error
-	RollbackFS(cli.Context) error
-
-	Name(cli.Context) string
-	Flags() []cli.Flag
-	ValidateSettings(cli.Context) error
-}
-
-type CDNProvider interface {
-	CreateCDN(cli.Context) (string, error)
+	CreateFS(g types.GlobalFlags, c types.CreateFlags) error
+	DeployFS(g types.GlobalFlags, d types.DeployFlags) error
+	RollbackFS(g types.GlobalFlags, r types.RollbackFlags) error
 
 	Name() string
 	Flags() []cli.Flag
-	ValidateSettings(cli.Context) error
+	ValidateSettings() error
+}
+
+type CDNProvider interface {
+	CreateCDN(g types.GlobalFlags, c types.CreateFlags) (cdnDomain string, err error)
+
+	Name() string
+	Flags() []cli.Flag
+	ValidateSettings() error
 }

@@ -5,54 +5,50 @@ import (
 	"fmt"
 
 	"github.com/eagerio/Stout/src/providers"
-	"github.com/urfave/cli"
+	"github.com/eagerio/Stout/src/types"
 )
 
-func Create(c *cli.Context) error {
-	fsString := c.GlobalString("fs")
-	cdnString := c.GlobalString("cdn")
-	dnsString := c.GlobalString("dns")
-
-	if fsString == "" || cdnString == "" || dnsString == "" {
+func Create(g types.GlobalFlags, c types.CreateFlags) error {
+	if g.FS == "" || g.CDN == "" || g.DNS == "" {
 		return errors.New("The --dns, --fs, and --cdn flags and values are required for the `create` command")
 	}
 
-	err, fsProvider := providers.ValidateProviderType(fsString, providers.FS_PROVIDER_TYPE)
+	err, fsProvider := providers.ValidateProviderType(g.FS, providers.FS_PROVIDER_TYPE)
 	if err != nil {
 		return err
 	}
-	err, cdnProvider := providers.ValidateProviderType(cdnString, providers.CDN_PROVIDER_TYPE)
+	err, cdnProvider := providers.ValidateProviderType(g.CDN, providers.CDN_PROVIDER_TYPE)
 	if err != nil {
 		return err
 	}
-	err, dnsProvider := providers.ValidateProviderType(dnsString, providers.DNS_PROVIDER_TYPE)
+	err, dnsProvider := providers.ValidateProviderType(g.DNS, providers.DNS_PROVIDER_TYPE)
 	if err != nil {
 		return err
 	}
 
 	fsProviderTyped, _ := fsProvider.(providers.FSProvider)
-	if err := fsProviderTyped.ValidateSettings(*c); err != nil {
+	if err := fsProviderTyped.ValidateSettings(); err != nil {
 		return err
 	}
 	cdnProviderTyped, _ := cdnProvider.(providers.CDNProvider)
-	if err := cdnProviderTyped.ValidateSettings(*c); err != nil {
+	if err := cdnProviderTyped.ValidateSettings(); err != nil {
 		return err
 	}
 	dnsProviderTyped, _ := dnsProvider.(providers.DNSProvider)
-	if err := dnsProviderTyped.ValidateSettings(*c); err != nil {
+	if err := dnsProviderTyped.ValidateSettings(); err != nil {
 		return err
 	}
 
 	// during the create phase, the domain name for the cdn
 	// needs to be provided to the dns
-	if err := fsProviderTyped.CreateFS(*c); err != nil {
+	if err := fsProviderTyped.CreateFS(g, c); err != nil {
 		return err
 	}
-	cdnDomain, err := cdnProviderTyped.CreateCDN(*c)
+	cdnDomain, err := cdnProviderTyped.CreateCDN(g, c)
 	if err != nil {
 		return err
 	}
-	if err := dnsProviderTyped.CreateDNS(*c, cdnDomain); err != nil {
+	if err := dnsProviderTyped.CreateDNS(g, c, cdnDomain); err != nil {
 		return err
 	}
 
