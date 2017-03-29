@@ -7,7 +7,7 @@ import (
 
 	"github.com/eagerio/Stout/src/actions"
 	"github.com/eagerio/Stout/src/providers"
-	"github.com/eagerio/Stout/src/types"
+	"github.com/eagerio/Stout/src/providers/providermgmt"
 	"github.com/eagerio/Stout/src/utils"
 	"github.com/urfave/cli"
 )
@@ -54,10 +54,12 @@ To rollback to a specific deploy:
 }
 
 func main() {
-	var globalFlagHolder types.GlobalFlags
-	var createFlagHolder types.CreateFlags
-	var deployFlagHolder types.DeployFlags
-	var rollbackFlagHolder types.RollbackFlags
+	envHolder := providers.EnvHolder{
+		GlobalFlags:   &providers.GlobalFlags{},
+		CreateFlags:   &providers.CreateFlags{},
+		DeployFlags:   &providers.DeployFlags{},
+		RollbackFlags: &providers.RollbackFlags{},
+	}
 
 	app := cli.NewApp()
 	app.Name = "stout"
@@ -65,41 +67,46 @@ func main() {
 	app.Usage = "a reliable static website deploy tool"
 	app.UsageText = formattedUsageText()
 	app.Flags = []cli.Flag{
+		cli.BoolFlag{
+			Name:        "debug",
+			Usage:       "Display additional debug info",
+			Destination: &envHolder.GlobalFlags.Debug,
+		},
 		cli.StringFlag{
 			Name:        "config",
 			Value:       "",
 			Usage:       "A yaml file to read configuration from",
-			Destination: &globalFlagHolder.Config,
+			Destination: &envHolder.GlobalFlags.Config,
 		},
 		cli.StringFlag{
 			Name:        "env",
 			Value:       "",
 			Usage:       "The env to read from the config file",
-			Destination: &globalFlagHolder.Env,
+			Destination: &envHolder.GlobalFlags.Env,
 		},
 		cli.StringFlag{
 			Name:        "domain",
 			Value:       "",
 			Usage:       "The domain to deploy to",
-			Destination: &globalFlagHolder.Domain,
+			Destination: &envHolder.GlobalFlags.Domain,
 		},
 		cli.StringFlag{
 			Name:        "dns",
 			Value:       "",
 			Usage:       "The DNS provider to use",
-			Destination: &globalFlagHolder.DNS,
+			Destination: &envHolder.GlobalFlags.DNS,
 		},
 		cli.StringFlag{
 			Name:        "fs",
 			Value:       "",
 			Usage:       "The file storage provider to use",
-			Destination: &globalFlagHolder.FS,
+			Destination: &envHolder.GlobalFlags.FS,
 		},
 		cli.StringFlag{
 			Name:        "cdn",
 			Value:       "",
 			Usage:       "The CDN provider to use",
-			Destination: &globalFlagHolder.CDN,
+			Destination: &envHolder.GlobalFlags.CDN,
 		},
 	}
 	app.Commands = []cli.Command{
@@ -110,17 +117,22 @@ func main() {
 				cli.BoolFlag{
 					Name:        "create-ssl",
 					Usage:       "Request a SSL/TLS certificate to support https. Using this command will require email validation to prove you own this domain",
-					Destination: &createFlagHolder.CreateSSL,
+					Destination: &envHolder.CreateFlags.CreateSSL,
 				},
 				cli.BoolFlag{
 					Name:        "no-ssl",
 					Usage:       "Do not set up SSL/TLS certificates",
-					Destination: &createFlagHolder.NoSSL,
+					Destination: &envHolder.CreateFlags.NoSSL,
 				},
-			}, providers.CreateCommandFlags()...),
+			}, providermgmt.CreateCommandFlags()...),
 			Action: func(c *cli.Context) (err error) {
+				envHolder, err = utils.LoadEnvConfig(envHolder)
+				if err != nil {
+					return err
+				}
+
 				return utils.PanicsToErrors(func() error {
-					return actions.Create(globalFlagHolder, createFlagHolder)
+					return actions.Create(*envHolder.GlobalFlags, *envHolder.CreateFlags)
 				})
 			},
 		},
@@ -132,24 +144,29 @@ func main() {
 					Name:        "files",
 					Value:       "*",
 					Usage:       "Comma-seperated glob patterns of files to deploy (within root) independently from html referenced js and css files",
-					Destination: &deployFlagHolder.Files,
+					Destination: &envHolder.DeployFlags.Files,
 				},
 				cli.StringFlag{
 					Name:        "root",
 					Value:       "./",
 					Usage:       "The local directory (prefix) to deploy",
-					Destination: &deployFlagHolder.Root,
+					Destination: &envHolder.DeployFlags.Root,
 				},
 				cli.StringFlag{
 					Name:        "dest",
 					Value:       "./",
 					Usage:       "The destination directory to write files to in the FS storage location",
-					Destination: &deployFlagHolder.Dest,
+					Destination: &envHolder.DeployFlags.Dest,
 				},
-			}, providers.DeployCommandFlags()...),
+			}, providermgmt.DeployCommandFlags()...),
 			Action: func(c *cli.Context) (err error) {
+				envHolder, err = utils.LoadEnvConfig(envHolder)
+				if err != nil {
+					return err
+				}
+
 				return utils.PanicsToErrors(func() error {
-					return actions.Deploy(globalFlagHolder, deployFlagHolder)
+					return actions.Deploy(*envHolder.GlobalFlags, *envHolder.DeployFlags)
 				})
 			},
 		},
@@ -161,17 +178,22 @@ func main() {
 					Name:        "dest",
 					Value:       "./",
 					Usage:       "The destination directory to write files to in the FS storage location",
-					Destination: &rollbackFlagHolder.Dest,
+					Destination: &envHolder.RollbackFlags.Dest,
 				},
 				cli.StringFlag{
 					Name:        "version",
 					Usage:       "The version to rollback to (the version should be the output of the deploy you wish to rollback to)",
-					Destination: &rollbackFlagHolder.Version,
+					Destination: &envHolder.RollbackFlags.Version,
 				},
-			}, providers.RollbackCommandFlags()...),
+			}, providermgmt.RollbackCommandFlags()...),
 			Action: func(c *cli.Context) (err error) {
+				envHolder, err = utils.LoadEnvConfig(envHolder)
+				if err != nil {
+					return err
+				}
+
 				return utils.PanicsToErrors(func() error {
-					return actions.Rollback(globalFlagHolder, rollbackFlagHolder)
+					return actions.Rollback(*envHolder.GlobalFlags, *envHolder.RollbackFlags)
 				})
 			},
 		},
@@ -180,7 +202,6 @@ func main() {
 	app.CommandNotFound = func(c *cli.Context, command string) {
 		fmt.Fprintf(c.App.Writer, "stout error: %q is not recognized as a valid command.\n", command)
 	}
-	// app.Before = altsrc.InitInputSourceWithContext(flags, altsrc.NewYamlSourceFromFlagFunc("config"))
 
 	err := app.Run(os.Args)
 	if err != nil {

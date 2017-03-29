@@ -1,0 +1,21 @@
+default:
+        globalflags:
+                domain: "testing.example.com"
+                dns: "amazon"
+                fs: "amazon"
+                cdn: "amazon"
+        createflags:
+                createssl: true
+                nossl: false
+        deployflags:
+                files: "*.html"
+                root: "./"
+                dest: "./"
+        rollbackflags:
+                dest: "./"
+        providerflags:
+                amazon:
+                        key: "testkey"
+                        secret: "testsecret"
+                        region: "testregion"
+                        newuser: true

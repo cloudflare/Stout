@@ -7,14 +7,14 @@ import (
 
 	"golang.org/x/crypto/ssh/terminal"
 
+	"github.com/eagerio/Stout/src/providers"
 	"github.com/eagerio/Stout/src/providers/amazonprovider/cdn"
 	"github.com/eagerio/Stout/src/providers/amazonprovider/dns"
 	"github.com/eagerio/Stout/src/providers/amazonprovider/fs"
-	"github.com/eagerio/Stout/src/types"
 )
 
 // Create a route53 route
-func (a *client) CreateDNS(g types.GlobalFlags, c types.CreateFlags, cdnDomainName string) error {
+func (a *client) CreateDNS(g providers.GlobalFlags, c providers.CreateFlags, cdnDomainName string) error {
 	fmt.Println("Adding Route")
 	err := dns.UpdateR53Route(r53Session, g.Domain, cdnDomainName)
 	if err != nil {
@@ -25,7 +25,7 @@ func (a *client) CreateDNS(g types.GlobalFlags, c types.CreateFlags, cdnDomainNa
 }
 
 // Create a new s3 bucket, optionally create a new user
-func (a *client) CreateFS(g types.GlobalFlags, c types.CreateFlags) error {
+func (a *client) CreateFS(g providers.GlobalFlags, c providers.CreateFlags) error {
 	fmt.Println("Creating Bucket")
 	err := fs.CreateS3Bucket(s3Session, g.Domain)
 	if err != nil {
@@ -67,7 +67,7 @@ func (a *client) CreateFS(g types.GlobalFlags, c types.CreateFlags) error {
 }
 
 // Create a new CloudFront distrbution
-func (a *client) CreateCDN(g types.GlobalFlags, c types.CreateFlags) (string, error) {
+func (a *client) CreateCDN(g providers.GlobalFlags, c providers.CreateFlags) (string, error) {
 	fmt.Println("Checking for available SSL/TLS certificates")
 	certificateARN, err := setUpSSL(awsSession, g.Domain, c.CreateSSL, c.NoSSL)
 	if err != nil {
@@ -88,11 +88,11 @@ func (a *client) CreateCDN(g types.GlobalFlags, c types.CreateFlags) (string, er
 }
 
 // Deploy a new version
-func (a *client) DeployFS(g types.GlobalFlags, d types.DeployFlags) error {
+func (a *client) DeployFS(g providers.GlobalFlags, d providers.DeployFlags) error {
 	return fs.Deploy(s3Session, g.Domain, d.Root, d.Files, d.Dest)
 }
 
 // Deploy a new version
-func (a *client) RollbackFS(g types.GlobalFlags, r types.RollbackFlags) error {
+func (a *client) RollbackFS(g providers.GlobalFlags, r providers.RollbackFlags) error {
 	return fs.Rollback(s3Session, g.Domain, r.Dest, r.Version)
 }

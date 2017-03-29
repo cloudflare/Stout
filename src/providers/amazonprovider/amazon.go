@@ -2,11 +2,14 @@ package amazonprovider
 
 import (
 	"errors"
+	"io/ioutil"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli"
+	ini "github.com/zackbloom/go-ini"
 )
 
 var Client client
@@ -22,15 +25,53 @@ func (a *client) Name() string {
 	return "amazon"
 }
 
+// Struct to represent the AWS config
+type AWSConfig struct {
+	Default struct {
+		AccessKey string `ini:"aws_access_key_id"`
+		SecretKey string `ini:"aws_secret_access_key"`
+	} `ini:"[default]"`
+}
+
+// load the aws config from ~/.aws/
+func loadAWSConfig() (access string, secret string) {
+	cfg := AWSConfig{}
+
+	//TODO: support windows loation for aws credentials
+	for _, file := range []string{"~/.aws/config", "~/.aws/credentials"} {
+		path, err := homedir.Expand(file)
+		if err != nil {
+			continue
+		}
+
+		content, err := ioutil.ReadFile(path)
+		if err != nil {
+			continue
+		}
+
+		ini.Unmarshal(content, &cfg)
+
+		if cfg.Default.AccessKey != "" {
+			break
+		}
+	}
+
+	return cfg.Default.AccessKey, cfg.Default.SecretKey
+}
+
 func (a *client) Flags() []cli.Flag {
+	defaultKey, defaultSecret := loadAWSConfig()
+
 	return []cli.Flag{
 		cli.StringFlag{
 			Name:        "aws-key",
+			Value:       defaultKey,
 			Usage:       "The AWS key to use",
 			Destination: &a.AWSKey,
 		},
 		cli.StringFlag{
 			Name:        "aws-secret",
+			Value:       defaultSecret,
 			Usage:       "The AWS secret of the provided key",
 			Destination: &a.AWSSecret,
 		},
