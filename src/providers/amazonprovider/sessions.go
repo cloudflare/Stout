@@ -2,6 +2,7 @@ package amazonprovider
 
 import (
 	"errors"
+	"fmt"
 	"os/exec"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -37,7 +38,7 @@ var awsSession *session.Session
 func getRegion(region string) aws.Region {
 	regionS, ok := aws.Regions[region]
 	if !ok {
-		panic("Region not found")
+		panic(fmt.Sprintf("Provided region (%s) not found", region))
 	}
 	return regionS
 }

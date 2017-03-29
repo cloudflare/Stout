@@ -5,23 +5,23 @@ import (
 	"fmt"
 
 	"github.com/eagerio/Stout/src/providers"
-	"github.com/eagerio/Stout/src/types"
+	"github.com/eagerio/Stout/src/providers/providermgmt"
 )
 
-func Create(g types.GlobalFlags, c types.CreateFlags) error {
+func Create(g providers.GlobalFlags, c providers.CreateFlags) error {
 	if g.FS == "" || g.CDN == "" || g.DNS == "" {
 		return errors.New("The --dns, --fs, and --cdn flags and values are required for the `create` command")
 	}
 
-	err, fsProvider := providers.ValidateProviderType(g.FS, providers.FS_PROVIDER_TYPE)
+	err, fsProvider := providermgmt.ValidateProviderType(g.FS, providermgmt.FS_PROVIDER_TYPE)
 	if err != nil {
 		return err
 	}
-	err, cdnProvider := providers.ValidateProviderType(g.CDN, providers.CDN_PROVIDER_TYPE)
+	err, cdnProvider := providermgmt.ValidateProviderType(g.CDN, providermgmt.CDN_PROVIDER_TYPE)
 	if err != nil {
 		return err
 	}
-	err, dnsProvider := providers.ValidateProviderType(g.DNS, providers.DNS_PROVIDER_TYPE)
+	err, dnsProvider := providermgmt.ValidateProviderType(g.DNS, providermgmt.DNS_PROVIDER_TYPE)
 	if err != nil {
 		return err
 	}

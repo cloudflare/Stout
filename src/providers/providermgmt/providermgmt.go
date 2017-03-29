@@ -1,9 +1,10 @@
-package providers
+package providermgmt
 
 import (
 	"errors"
 	"fmt"
 
+	"github.com/eagerio/Stout/src/providers"
 	"github.com/eagerio/Stout/src/providers/amazonprovider"
 	"github.com/urfave/cli"
 )
@@ -16,7 +17,7 @@ const (
 	CDN_PROVIDER_TYPE = providerConst("cdn")
 )
 
-var providerList = map[string]ProviderClient{
+var ProviderList = map[string]providers.ProviderClient{
 	amazonprovider.Client.Name(): &amazonprovider.Client,
 }
 
@@ -33,21 +34,21 @@ func RollbackCommandFlags() []cli.Flag {
 }
 
 func commandFlags(dns bool, fs bool, cdn bool) (flags []cli.Flag) {
-	for _, provider := range providerList {
+	for _, provider := range ProviderList {
 		addFlags := false
 
 		if dns {
-			if _, ok := provider.(DNSProvider); ok {
+			if _, ok := provider.(providers.DNSProvider); ok {
 				addFlags = true
 			}
 		}
 		if fs {
-			if _, ok := provider.(FSProvider); ok {
+			if _, ok := provider.(providers.FSProvider); ok {
 				addFlags = true
 			}
 		}
 		if cdn {
-			if _, ok := provider.(CDNProvider); ok {
+			if _, ok := provider.(providers.CDNProvider); ok {
 				addFlags = true
 			}
 		}
@@ -62,24 +63,24 @@ func commandFlags(dns bool, fs bool, cdn bool) (flags []cli.Flag) {
 	return
 }
 
-func ValidateProviderType(str string, providerType providerConst) (error, ProviderClient) {
-	possibleProvider, ok := providerList[str]
+func ValidateProviderType(str string, providerType providerConst) (error, providers.ProviderClient) {
+	possibleProvider, ok := ProviderList[str]
 	if !ok {
 		return errors.New(fmt.Sprintf("%q is not a supported provider (was attempted to be used as a %s provider)", str, providerType)), nil
 	}
 
 	if providerType == FS_PROVIDER_TYPE {
-		if _, ok := possibleProvider.(FSProvider); ok {
+		if _, ok := possibleProvider.(providers.FSProvider); ok {
 			return nil, possibleProvider
 		}
 	}
 	if providerType == DNS_PROVIDER_TYPE {
-		if _, ok := possibleProvider.(DNSProvider); ok {
+		if _, ok := possibleProvider.(providers.DNSProvider); ok {
 			return nil, possibleProvider
 		}
 	}
 	if providerType == CDN_PROVIDER_TYPE {
-		if _, ok := possibleProvider.(CDNProvider); ok {
+		if _, ok := possibleProvider.(providers.CDNProvider); ok {
 			return nil, possibleProvider
 		}
 	}
