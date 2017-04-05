@@ -12,7 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/zackbloom/goamz/s3"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/s3"
 )
 
 const (
@@ -44,20 +45,17 @@ func mustInt(val int, err error) int {
 }
 
 // Copy file in s3
-func copyFile(bucket *s3.Bucket, from string, to string, contentType string, maxAge int) {
-	copyOpts := s3.CopyOptions{
-		MetadataDirective: "REPLACE",
-		ContentType:       contentType,
-		Options: s3.Options{
-			CacheControl:    fmt.Sprintf("public, max-age=%d", maxAge),
-			ContentEncoding: "gzip",
-		},
-	}
-
-	_, err := bucket.PutCopy(to, s3.PublicRead, copyOpts, joinPath(bucket.Name, from))
-	if err != nil {
-		panic(err)
-	}
+func copyFile(s3Session *s3.S3, domain string, from string, to string, contentType string, maxAge int) error {
+	_, err := s3Session.CopyObject(&s3.CopyObjectInput{
+		Bucket:            aws.String(domain),
+		MetadataDirective: aws.String("REPLACE"),
+		ContentType:       aws.String(contentType),
+		CacheControl:      aws.String(fmt.Sprintf("public, max-age=%d", maxAge)),
+		ContentEncoding:   aws.String("gzip"),
+		CopySource:        aws.String(joinPath(domain, from)),
+		ACL:               aws.String(s3.BucketCannedACLPublicRead),
+	})
+	return err
 }
 
 // Merge files using forward slashes and not the system path seperator if that is different

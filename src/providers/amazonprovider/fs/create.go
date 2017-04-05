@@ -1,89 +1,104 @@
 package fs
 
 import (
-	"github.com/zackbloom/goamz/iam"
-	"github.com/zackbloom/goamz/s3"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/s3"
 )
 
 // Create new IAM user upon using the 'create' command, '--no-user' flag disables this
 func CreateS3User(iamSession *iam.IAM, domain string) (key iam.AccessKey, err error) {
 	name := domain + "_deploy"
 
-	_, err = iamSession.CreateUser(name, "/")
+	_, err = iamSession.CreateUser(&iam.CreateUserInput{
+		UserName: aws.String(name),
+		Path:     aws.String("/"),
+	})
 	if err != nil {
-		iamErr, ok := err.(*iam.Error)
-		if !ok || iamErr.Code != "EntityAlreadyExists" {
+		if err.Error() == iam.ErrCodeEntityAlreadyExistsException {
 			return
 		}
 	}
 
 	// user policy that only allows access to the specified bucket
-	_, err = iamSession.PutUserPolicy(name, name, `{
-			"Version": "2012-10-17",
-			"Statement": [
-				{
-					"Effect": "Allow",
-					"Action": [
-						"s3:DeleteObject",
-						"s3:ListBucket",
-						"s3:PutObject",
-						"s3:PutObjectAcl",
-						"s3:GetObject"
-					],
-					"Resource": [
-						"arn:aws:s3:::`+domain+`", "arn:aws:s3:::`+domain+`/*"
+	_, err = iamSession.PutUserPolicy(&iam.PutUserPolicyInput{
+		PolicyDocument: aws.String(`{
+					"Version": "2012-10-17",
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Action": [
+								"s3:DeleteObject",
+								"s3:ListBucket",
+								"s3:PutObject",
+								"s3:PutObjectAcl",
+								"s3:GetObject"
+							],
+							"Resource": [
+								"arn:aws:s3:::` + domain + `", "arn:aws:s3:::` + domain + `/*"
+							]
+						}
 					]
-				}
-			]
-		}`,
-	)
+				}`),
+		PolicyName: aws.String(name),
+		UserName:   aws.String(name),
+	})
 	if err != nil {
 		return
 	}
 
-	keyResp, err := iamSession.CreateAccessKey(name)
+	keyResp, err := iamSession.CreateAccessKey(&iam.CreateAccessKeyInput{
+		UserName: aws.String(name),
+	})
 	if err != nil {
 		return
 	}
 
-	return keyResp.AccessKey, nil
+	return *keyResp.AccessKey, nil
 }
 
 func CreateS3Bucket(s3Session *s3.S3, domain string) error {
-	bucket := s3Session.Bucket(domain)
-
-	err := bucket.PutBucket("public-read")
-	if err != nil {
+	bucket, err := s3Session.CreateBucket(&s3.CreateBucketInput{
+		ACL:    aws.String(s3.BucketCannedACLPublicRead),
+		Bucket: aws.String(domain),
+	})
+	if err.Error() != s3.ErrCodeBucketAlreadyExists {
 		return err
 	}
 
-	err = bucket.PutBucketWebsite(s3.WebsiteConfiguration{
-		IndexDocument: &s3.IndexDocument{
-			Suffix: "index.html",
-		},
-		ErrorDocument: &s3.ErrorDocument{
-			Key: "index.html",
+	_, err = s3Session.PutBucketWebsite(&s3.PutBucketWebsiteInput{
+		Bucket: bucket.Location,
+		WebsiteConfiguration: &s3.WebsiteConfiguration{
+			IndexDocument: &s3.IndexDocument{
+				Suffix: aws.String("index.html"),
+			},
+			ErrorDocument: &s3.ErrorDocument{
+				Key: aws.String("index.html"),
+			},
 		},
 	})
 	if err != nil {
 		return err
 	}
 
-	err = bucket.PutPolicy([]byte(`{
-			"Version": "2008-10-17",
-			"Statement": [
-				{
-					"Sid": "PublicReadForGetBucketObjects",
-					"Effect": "Allow",
-					"Principal": {
-						"AWS": "*"
-					},
-					"Action": "s3:GetObject",
-					"Resource": "arn:aws:s3:::` + domain + `/*"
-				}
-			]
-		}`,
-	))
+	_, err = s3Session.PutBucketPolicy(&s3.PutBucketPolicyInput{
+		Bucket: bucket.Location,
+		Policy: aws.String(`{
+				"Version": "2008-10-17",
+				"Statement": [
+					{
+						"Sid": "PublicReadForGetBucketObjects",
+						"Effect": "Allow",
+						"Principal": {
+							"AWS": "*"
+						},
+						"Action": "s3:GetObject",
+						"Resource": "arn:aws:s3:::` + domain + `/*"
+					}
+				]
+			}`,
+		),
+	})
 	if err != nil {
 		return err
 	}

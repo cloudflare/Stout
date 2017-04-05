@@ -4,9 +4,6 @@ import (
 	"errors"
 	"io/ioutil"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli"
 	ini "github.com/zackbloom/go-ini"
@@ -100,31 +97,9 @@ func (a *client) ValidateSettings() error {
 		return errors.New("Missing aws-region flag")
 	}
 
-	err := checkForAWS()
+	err := setupAWS(a.AWSKey, a.AWSSecret, a.AWSRegion)
 	if err != nil {
 		return err
-	}
-
-	//official sdk connection
-	if awsSession == nil {
-		awsSession = session.New(&aws.Config{
-			Region:      aws.String(a.AWSRegion),
-			Credentials: credentials.NewStaticCredentials(a.AWSKey, a.AWSSecret, ""),
-		})
-	}
-
-	// open all services sessions
-	if s3Session == nil {
-		s3Session = openS3(a.AWSKey, a.AWSSecret, a.AWSRegion)
-	}
-	if iamSession == nil {
-		iamSession = openIAM(a.AWSKey, a.AWSSecret, a.AWSRegion)
-	}
-	if r53Session == nil {
-		r53Session = openRoute53(a.AWSKey, a.AWSSecret)
-	}
-	if cfSession == nil {
-		cfSession = openCloudFront(a.AWSKey, a.AWSSecret)
 	}
 
 	return nil
