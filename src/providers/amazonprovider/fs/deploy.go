@@ -3,7 +3,6 @@ package fs
 import (
 	"bytes"
 	"compress/gzip"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
@@ -17,8 +16,9 @@ import (
 
 	"log"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/wsxiaoys/terminal/color"
-	"github.com/zackbloom/goamz/s3"
 )
 
 const (
@@ -35,7 +35,7 @@ var NO_GZIP = []string{
 }
 
 type UploadFileRequest struct {
-	Bucket       *s3.Bucket
+	Bucket       string
 	Reader       io.Reader
 	Path         string
 	Dest         string
@@ -43,7 +43,7 @@ type UploadFileRequest struct {
 	CacheSeconds int
 }
 
-func uploadFile(req UploadFileRequest) (remotePath string) {
+func uploadFile(s3Session *s3.S3, req UploadFileRequest) (remotePath string) {
 	buffer := bytes.NewBuffer([]byte{})
 
 	compress := shouldCompress(req.Path)
@@ -60,14 +60,6 @@ func uploadFile(req UploadFileRequest) (remotePath string) {
 
 	hash := hashBytes(data)
 	hashPrefix := fmt.Sprintf("%x", hash)[:12]
-	s3Opts := s3.Options{
-		ContentMD5:   base64.StdEncoding.EncodeToString(hash),
-		CacheControl: fmt.Sprintf("public, max-age=%d", req.CacheSeconds),
-	}
-
-	if compress {
-		s3Opts.ContentEncoding = "gzip"
-	}
 
 	dest := req.Path
 	if req.IncludeHash {
@@ -75,11 +67,20 @@ func uploadFile(req UploadFileRequest) (remotePath string) {
 	}
 	dest = filepath.Join(req.Dest, dest)
 
-	log.Printf("Uploading to %s in %s (%s) [%d]\n", dest, req.Bucket.Name, hashPrefix, req.CacheSeconds)
+	log.Printf("Uploading to %s in %s (%s) [%d]\n", dest, req.Bucket, hashPrefix, req.CacheSeconds)
 
 	op := func() error {
 		// We need to create a new reader each time, as we might be doing this more than once (if it fails)
-		return req.Bucket.PutReader(dest, bytes.NewReader(data), int64(len(data)), guessContentType(dest)+"; charset=utf-8", s3.PublicRead, s3Opts)
+		// return req.Bucket.PutReader(dest, bytes.NewReader(data), int64(len(data)), guessContentType(dest)+"; charset=utf-8", s3.PublicRead, s3Opts)
+		_, err := s3Session.PutObject(&s3.PutObjectInput{
+			ACL:           aws.String(s3.BucketCannedACLPublicRead),
+			Body:          bytes.NewReader(data),
+			Bucket:        aws.String(req.Bucket),
+			ContentLength: aws.Int64(int64(len(data))),
+			ContentType:   aws.String(guessContentType(dest) + "; charset=utf-8"),
+			Key:           aws.String(dest),
+		})
+		return err
 	}
 
 	back := backoff.NewExponentialBackOff()
@@ -108,8 +109,6 @@ type FileInst struct {
 
 // Open files and pass the handle to uploadFile function
 func writeFiles(s3Session *s3.S3, domain string, dest string, includeHash bool, files chan *FileRef) {
-	bucket := s3Session.Bucket(domain)
-
 	for file := range files {
 		handle := must(os.Open(file.LocalPath)).(*os.File)
 		defer handle.Close()
@@ -130,8 +129,8 @@ func writeFiles(s3Session *s3.S3, domain string, dest string, includeHash bool, 
 			panic(err)
 		}
 
-		(*file).UploadedPath = uploadFile(UploadFileRequest{
-			Bucket:       bucket,
+		(*file).UploadedPath = uploadFile(s3Session, UploadFileRequest{
+			Bucket:       domain,
 			Reader:       handle,
 			Path:         partialPath,
 			Dest:         dest,
@@ -337,9 +336,8 @@ func deployHTML(s3Session *s3.S3, domain string, root string, dest string, id st
 	permPath := joinPath(dest, id, internalPath)
 	curPath := joinPath(dest, internalPath)
 
-	bucket := s3Session.Bucket(domain)
-	uploadFile(UploadFileRequest{
-		Bucket:       bucket,
+	uploadFile(s3Session, UploadFileRequest{
+		Bucket:       domain,
 		Reader:       strings.NewReader(data),
 		Path:         permPath,
 		IncludeHash:  false,
@@ -347,7 +345,7 @@ func deployHTML(s3Session *s3.S3, domain string, root string, dest string, id st
 	})
 
 	log.Println("Copying", permPath, "to", curPath)
-	copyFile(bucket, permPath, curPath, "text/html; charset=utf-8", LIMITED)
+	copyFile(s3Session, domain, permPath, curPath, "text/html; charset=utf-8", LIMITED)
 }
 
 // List all files to be acted upon from the root and glob patterns

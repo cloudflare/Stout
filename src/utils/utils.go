@@ -15,16 +15,19 @@ func ErrorMerge(str string, err error) error {
 	return errors.New(str + " " + err.Error())
 }
 
-func PanicsToErrors(f func() error) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			var ok bool
-			err, ok = r.(error)
-			if !ok {
-				err = fmt.Errorf("%v", r)
+func PanicsToErrors(debugMode bool, f func() error) (err error) {
+	fmt.Println(debugMode)
+	if !debugMode {
+		defer func() {
+			if r := recover(); r != nil {
+				var ok bool
+				err, ok = r.(error)
+				if !ok {
+					err = fmt.Errorf("%v", r)
+				}
 			}
-		}
-	}()
+		}()
+	}
 
 	return f()
 }

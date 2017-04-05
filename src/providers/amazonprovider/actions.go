@@ -41,8 +41,8 @@ func (a *client) CreateFS(g providers.GlobalFlags, c providers.CreateFlags) erro
 		fmt.Println("An access key has been created with just the permissions required to deploy / rollback this site")
 		fmt.Println("It is strongly recommended you use this limited account to deploy this project in the future")
 		fmt.Println()
-		fmt.Printf("ACCESS_KEY_ID=%s\n", key.Id)
-		fmt.Printf("ACCESS_KEY_SECRET=%s\n\n", key.Secret)
+		fmt.Printf("ACCESS_KEY_ID=%s\n", *key.AccessKeyId)
+		fmt.Printf("ACCESS_KEY_SECRET=%s\n\n", *key.SecretAccessKey)
 
 		if terminal.IsTerminal(int(os.Stdin.Fd())) {
 			fmt.Println(`You can either add these credentials to the deploy.yaml file,
@@ -57,7 +57,7 @@ func (a *client) CreateFS(g providers.GlobalFlags, c providers.CreateFlags) erro
 
 	Your first deploy command might be:
 
-		stout deploy --domain ` + g.Domain + ` --key ` + key.Id + ` --secret '` + key.Secret + `'
+		stout deploy --domain ` + g.Domain + ` --key ` + *key.AccessKeyId + ` --secret '` + *key.SecretAccessKey + `'
 	`)
 		}
 

@@ -131,7 +131,7 @@ func main() {
 					return err
 				}
 
-				return utils.PanicsToErrors(func() error {
+				return utils.PanicsToErrors(envHolder.GlobalFlags.Debug, func() error {
 					return actions.Create(*envHolder.GlobalFlags, *envHolder.CreateFlags)
 				})
 			},
@@ -165,7 +165,7 @@ func main() {
 					return err
 				}
 
-				return utils.PanicsToErrors(func() error {
+				return utils.PanicsToErrors(envHolder.GlobalFlags.Debug, func() error {
 					return actions.Deploy(*envHolder.GlobalFlags, *envHolder.DeployFlags)
 				})
 			},
@@ -192,7 +192,7 @@ func main() {
 					return err
 				}
 
-				return utils.PanicsToErrors(func() error {
+				return utils.PanicsToErrors(envHolder.GlobalFlags.Debug, func() error {
 					return actions.Rollback(*envHolder.GlobalFlags, *envHolder.RollbackFlags)
 				})
 			},
