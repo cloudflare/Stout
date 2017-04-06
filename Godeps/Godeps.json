@@ -137,6 +137,21 @@
 			"Rev": "e8dd0cf538447be8f8d88f2daabcf3210b9d3b68"
 		},
 		{
+			"ImportPath": "github.com/aws/aws-sdk-go/service/iam",
+			"Comment": "v1.8.4-3-ge8dd0cf",
+			"Rev": "e8dd0cf538447be8f8d88f2daabcf3210b9d3b68"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/service/route53",
+			"Comment": "v1.8.4-3-ge8dd0cf",
+			"Rev": "e8dd0cf538447be8f8d88f2daabcf3210b9d3b68"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/service/s3",
+			"Comment": "v1.8.4-3-ge8dd0cf",
+			"Rev": "e8dd0cf538447be8f8d88f2daabcf3210b9d3b68"
+		},
+		{
 			"ImportPath": "github.com/aws/aws-sdk-go/service/sts",
 			"Comment": "v1.8.4-3-ge8dd0cf",
 			"Rev": "e8dd0cf538447be8f8d88f2daabcf3210b9d3b68"
@@ -177,26 +192,6 @@
 		{
 			"ImportPath": "github.com/zackbloom/go-ini",
 			"Rev": "3db81f263990ac57212cfdc3ce9a65e8af8af966"
-		},
-		{
-			"ImportPath": "github.com/zackbloom/goamz/aws",
-			"Rev": "69fa356b63370a7daf86729ee8d777ff8f27ab38"
-		},
-		{
-			"ImportPath": "github.com/zackbloom/goamz/cloudfront",
-			"Rev": "69fa356b63370a7daf86729ee8d777ff8f27ab38"
-		},
-		{
-			"ImportPath": "github.com/zackbloom/goamz/iam",
-			"Rev": "69fa356b63370a7daf86729ee8d777ff8f27ab38"
-		},
-		{
-			"ImportPath": "github.com/zackbloom/goamz/route53",
-			"Rev": "69fa356b63370a7daf86729ee8d777ff8f27ab38"
-		},
-		{
-			"ImportPath": "github.com/zackbloom/goamz/s3",
-			"Rev": "69fa356b63370a7daf86729ee8d777ff8f27ab38"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/ssh/terminal",
