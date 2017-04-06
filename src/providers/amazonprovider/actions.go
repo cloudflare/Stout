@@ -26,13 +26,13 @@ func (a *client) CreateDNS(g providers.GlobalFlags, c providers.CreateFlags, cdn
 
 // Create a new s3 bucket, optionally create a new user
 func (a *client) CreateFS(g providers.GlobalFlags, c providers.CreateFlags) error {
-	fmt.Println("Creating Bucket")
-	err := fs.CreateS3Bucket(s3Session, g.Domain)
+	fmt.Println("Getting/Creating S3 Bucket")
+	err := fs.CreateS3Bucket(s3Session, g.Domain, a.Region)
 	if err != nil {
 		return errors.New("Error creating S3 bucket\n" + err.Error())
 	}
 
-	if a.AWSNewUser {
+	if a.NewUser {
 		key, err := fs.CreateS3User(iamSession, g.Domain)
 		if err != nil {
 			return errors.New("Error creating user\n" + err.Error())
@@ -79,7 +79,7 @@ func (a *client) CreateCDN(g providers.GlobalFlags, c providers.CreateFlags) (st
 	}
 
 	fmt.Println("Loading/Creating CloudFront Distribution")
-	cdnDomainName, err := cdn.GetCFDistribution(awsSession, certificateARN, c.CreateSSL, g.Domain, a.AWSRegion)
+	cdnDomainName, err := cdn.GetCFDistribution(cfSession, certificateARN, c.CreateSSL, g.Domain, a.Region)
 	if err != nil {
 		return "", errors.New("Error loading/creating CloudFront distribution\n" + err.Error())
 	}

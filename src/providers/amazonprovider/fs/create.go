@@ -14,10 +14,8 @@ func CreateS3User(iamSession *iam.IAM, domain string) (key iam.AccessKey, err er
 		UserName: aws.String(name),
 		Path:     aws.String("/"),
 	})
-	if err != nil {
-		if err.Error() == iam.ErrCodeEntityAlreadyExistsException {
-			return
-		}
+	if err != nil && err.Error() == iam.ErrCodeEntityAlreadyExistsException {
+		return
 	}
 
 	// user policy that only allows access to the specified bucket
@@ -57,12 +55,20 @@ func CreateS3User(iamSession *iam.IAM, domain string) (key iam.AccessKey, err er
 	return *keyResp.AccessKey, nil
 }
 
-func CreateS3Bucket(s3Session *s3.S3, domain string) error {
+func CreateS3Bucket(s3Session *s3.S3, domain string, region string) error {
+	var bucketConfig *s3.CreateBucketConfiguration
+	if region != "us-east-1" {
+		bucketConfig = &s3.CreateBucketConfiguration{
+			LocationConstraint: aws.String(region),
+		}
+	}
+
 	bucket, err := s3Session.CreateBucket(&s3.CreateBucketInput{
 		ACL:    aws.String(s3.BucketCannedACLPublicRead),
 		Bucket: aws.String(domain),
+		CreateBucketConfiguration: bucketConfig,
 	})
-	if err.Error() != s3.ErrCodeBucketAlreadyExists {
+	if err != nil && err.Error() != s3.ErrCodeBucketAlreadyExists {
 		return err
 	}
 

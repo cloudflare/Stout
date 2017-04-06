@@ -1,11 +1,9 @@
 package cdn
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudfront"
 )
 
@@ -13,45 +11,59 @@ import (
 // create one if none already exists for the specified domain name in options
 // Check if SSL is set up for the distribution and set that up if a ACM Cert ARN is passed in
 // Returns distribution domain name
-func GetCFDistribution(amazonSession *session.Session, certificateARN string, createSSL bool, domain string, awsRegion string) (string, error) {
-	cloudfrontService := cloudfront.New(amazonSession)
-	dists, err := cloudfrontService.ListDistributions(&cloudfront.ListDistributionsInput{
-		MaxItems: aws.Int64(500),
-	})
-	if err != nil {
-		return "", err
-	}
-
-	if *dists.DistributionList.IsTruncated {
-		return "", errors.New("You have more than 500 distributions, please consider opening a GitHub issue if you require support for this.")
-	}
-
+func GetCFDistribution(cfSession *cloudfront.CloudFront, certificateARN string, createSSL bool, domain string, awsRegion string) (string, error) {
+	fmt.Println("Getting a CloudFront distribution with the domain name.")
 	var currentDist *cloudfront.DistributionSummary
-	//check for already existing distributions
-	for _, distSummary := range dists.DistributionList.Items {
-		for _, alias := range distSummary.Aliases.Items {
-			if *alias == domain {
-				//matching distribution found
-				fmt.Println("CloudFront distribution found with the provided bucket name, assuming config matches.")
-				fmt.Println("If you run into issues, delete the distribution and rerun this command.")
-				currentDist = distSummary
-			}
-		}
-	}
 
-	if currentDist != nil && !createSSL {
-		// if there is a distribution already and there is no upgrade request, return it
-		return *currentDist.DomainName, nil
-	} else if currentDist != nil && createSSL {
-		// if there is a distribution and createssl is an option, check if the distribution has a certificate
-		distDetail, err := cloudfrontService.GetDistribution(&cloudfront.GetDistributionInput{
-			Id: aws.String(*currentDist.Id),
+	var marker *string
+	for {
+		dists, err := cfSession.ListDistributions(&cloudfront.ListDistributionsInput{
+			MaxItems: aws.Int64(500),
+			Marker:   marker,
 		})
 		if err != nil {
 			return "", err
 		}
-		// if there is no certificate installed, update it
-		if *distDetail.Distribution.DistributionConfig.ViewerCertificate.CloudFrontDefaultCertificate {
+
+		//check for already existing distributions
+		for _, distSummary := range dists.DistributionList.Items {
+			for _, alias := range distSummary.Aliases.Items {
+				if *alias == domain {
+					//matching distribution found
+					fmt.Println("CloudFront distribution found with the provided bucket name, assuming config matches.")
+					fmt.Println("If you run into issues, delete the distribution and rerun this command.")
+					currentDist = distSummary
+				}
+			}
+		}
+		if currentDist != nil {
+			break
+		}
+
+		if *dists.DistributionList.IsTruncated {
+			marker = dists.DistributionList.NextMarker
+		} else {
+			break
+		}
+	}
+
+	if currentDist != nil {
+		// if there is a distribution already and there is no upgrade request, return it
+		if !createSSL {
+			return *currentDist.DomainName, nil
+		}
+
+		// if the default certificate is installed (as opposed to a custom one), update it
+		certIsDefault := currentDist.ViewerCertificate.CloudFrontDefaultCertificate
+		if certIsDefault != nil && *certIsDefault {
+			// get the actual distribution
+			distDetail, err := cfSession.GetDistribution(&cloudfront.GetDistributionInput{
+				Id: currentDist.Id,
+			})
+			if err != nil {
+				return "", err
+			}
+
 			fmt.Println("Updating current CloudFront distribution with your new certificate")
 			distDetail.Distribution.DistributionConfig.ViewerCertificate = &cloudfront.ViewerCertificate{
 				ACMCertificateArn:      aws.String(certificateARN),
@@ -60,7 +72,7 @@ func GetCFDistribution(amazonSession *session.Session, certificateARN string, cr
 				MinimumProtocolVersion: aws.String("TLSv1"),
 				SSLSupportMethod:       aws.String("sni-only"),
 			}
-			_, err := cloudfrontService.UpdateDistribution(&cloudfront.UpdateDistributionInput{
+			_, err = cfSession.UpdateDistribution(&cloudfront.UpdateDistributionInput{
 				DistributionConfig: distDetail.Distribution.DistributionConfig,
 				Id:                 distDetail.Distribution.Id,
 				IfMatch:            distDetail.ETag,
@@ -72,21 +84,30 @@ func GetCFDistribution(amazonSession *session.Session, certificateARN string, cr
 		return *currentDist.DomainName, nil
 	}
 
-	//no matching distribution, create one
+	fmt.Println("Existing CloudFront distribution not found. Creating one.")
+	resp, err := createCFDistribution(cfSession, certificateARN, domain, awsRegion)
+	if err != nil {
+		return "", err
+	}
+
+	return *resp.Distribution.DomainName, nil
+}
+
+func createCFDistribution(cfSession *cloudfront.CloudFront, certificateARN string, domain string, awsRegion string) (*cloudfront.CreateDistributionOutput, error) {
 	var viewerCertificate cloudfront.ViewerCertificate
-	if certificateARN != "" {
+	if certificateARN == "" {
+		viewerCertificate = cloudfront.ViewerCertificate{
+			CertificateSource:            aws.String("cloudfront"),
+			CloudFrontDefaultCertificate: aws.Bool(true),
+			MinimumProtocolVersion:       aws.String("SSLv3"),
+		}
+	} else {
 		viewerCertificate = cloudfront.ViewerCertificate{
 			ACMCertificateArn:      aws.String(certificateARN),
 			Certificate:            aws.String(certificateARN),
 			CertificateSource:      aws.String("acm"),
 			MinimumProtocolVersion: aws.String("TLSv1"),
 			SSLSupportMethod:       aws.String("sni-only"),
-		}
-	} else {
-		viewerCertificate = cloudfront.ViewerCertificate{
-			CertificateSource:            aws.String("cloudfront"),
-			CloudFrontDefaultCertificate: aws.Bool(true),
-			MinimumProtocolVersion:       aws.String("SSLv3"),
 		}
 	}
 	params := &cloudfront.CreateDistributionInput{
@@ -199,11 +220,6 @@ func GetCFDistribution(amazonSession *session.Session, certificateARN string, cr
 			WebACLId:          aws.String(""),
 		},
 	}
-	resp, err := cloudfrontService.CreateDistribution(params)
-	if err != nil {
-		return "", err
-	}
 
-	fmt.Println("Creating a new CloudFront distribution with the bucket name.")
-	return *resp.Distribution.DomainName, nil
+	return cfSession.CreateDistribution(params)
 }
