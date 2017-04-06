@@ -16,7 +16,6 @@ func ErrorMerge(str string, err error) error {
 }
 
 func PanicsToErrors(debugMode bool, f func() error) (err error) {
-	fmt.Println(debugMode)
 	if !debugMode {
 		defer func() {
 			if r := recover(); r != nil {

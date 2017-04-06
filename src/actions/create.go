@@ -44,13 +44,18 @@ func Create(g providers.GlobalFlags, c providers.CreateFlags) error {
 	if err := fsProviderTyped.CreateFS(g, c); err != nil {
 		return err
 	}
+	fmt.Println()
+
 	cdnDomain, err := cdnProviderTyped.CreateCDN(g, c)
 	if err != nil {
 		return err
 	}
+	fmt.Println()
+
 	if err := dnsProviderTyped.CreateDNS(g, c, cdnDomain); err != nil {
 		return err
 	}
+	fmt.Println()
 
 	fmt.Println("You can begin deploying now, but it can take up to twenty minutes for your site to begin to work")
 	fmt.Println("Depending on the configuration of your site, you might need to set the 'root', 'dest' or 'files' options to get your deploys working as you wish.  See the README for details.")

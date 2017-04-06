@@ -12,7 +12,7 @@ import (
 
 // Add Route53 route
 func UpdateR53Route(r53Session *route53.Route53, domain string, cdnDomainName string) error {
-	//get zone name
+	// get zone name
 	zoneName, err := publicsuffix.EffectiveTLDPlusOne(domain)
 	if err != nil {
 		return err
@@ -20,23 +20,37 @@ func UpdateR53Route(r53Session *route53.Route53, domain string, cdnDomainName st
 
 	zoneName = zoneName + "."
 
-	resp, err := r53Session.ListHostedZonesByName(&route53.ListHostedZonesByNameInput{
-		HostedZoneId: aws.String(zoneName),
-		MaxItems:     aws.String("100"),
-	})
-	if err != nil {
-		return err
-	}
-
-	if *resp.IsTruncated {
-		panic("More than 100 zones in the account")
-	}
-
-	//find the first zone that matches the bucket zone name
 	var zone *route53.HostedZone
-	for _, z := range resp.HostedZones {
-		if (*z.Name) == zoneName {
-			zone = z
+
+	// markers (for going past 100 items)
+	var dnsName *string
+	var hostedZoneID *string
+	for {
+		resp, err := r53Session.ListHostedZonesByName(&route53.ListHostedZonesByNameInput{
+			DNSName:      dnsName,
+			HostedZoneId: hostedZoneID,
+			MaxItems:     aws.String("100"),
+		})
+		if err != nil {
+			return err
+		}
+
+		hostedZoneID = resp.NextHostedZoneId
+		dnsName = resp.NextDNSName
+
+		//find the first zone that matches the bucket zone name
+		for _, z := range resp.HostedZones {
+			if (*z.Name) == zoneName {
+				zone = z
+				break
+			}
+		}
+		if zone != nil {
+			fmt.Printf("Route53 hosted zone found for %s, continuing.\n", zoneName)
+			break
+		}
+
+		if !*resp.IsTruncated {
 			break
 		}
 	}
