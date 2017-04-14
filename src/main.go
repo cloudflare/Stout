@@ -20,13 +20,13 @@ stout help <command>, to learn more about a subcommand
 Example Usage:
 
 To create a site which will be hosted at my.awesome.website:
-  stout --fs amazon --cdn amazon --dns amazon create --domain my.awesome.website --key AWS_KEY --secret AWS_SECRET
+  stout --fs=amazon --cdn=amazon --dns=amazon create --domain=my.awesome.website --key=AWS_KEY --secret=AWS_SECRET
 
 To deploy the current folder to the root of the my.awesome.website site:
-  stout --fs amazon deploy --domain my.awesome.website --key AWS_KEY --secret AWS_SECRET
+  stout --fs=amazon deploy --domain=my.awesome.website --key=AWS_KEY --secret=AWS_SECRET
 
 To rollback to a specific deploy:
-  stout --fs amazon rollback --domain my.awesome.website --key AWS_KEY --secret AWS_SECRET c4a22bf94de1
+  stout --fs=amazon rollback --domain=my.awesome.website --key=AWS_KEY --secret=AWS_SECRET c4a22bf94de1
  `)
 
 	textArray := strings.Split(text, "\n")
@@ -113,7 +113,7 @@ func main() {
 			Flags: append([]cli.Flag{
 				cli.StringFlag{
 					Name:        "files",
-					Value:       "*",
+					Value:       "*.html",
 					Usage:       "Comma-seperated glob patterns of files to deploy (within root) independently from html referenced js and css files",
 					Destination: &envHolder.DeployFlags.Files,
 				},

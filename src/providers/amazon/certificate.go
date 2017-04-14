@@ -35,7 +35,7 @@ func findMatchingCertificate(acmService *acm.ACM, domain string, createSSL bool)
 		return "", nil
 	}
 
-	// if --create-ssl is specified, only look for exact match and stout tag, otherwise return nil and
+	// if --create-custom-ssl is specified, only look for exact match and stout tag, otherwise return nil and
 	if createSSL {
 		//determine if any certificate is an exact match
 		for _, certificate := range certificatesResponse.CertificateSummaryList {
@@ -226,7 +226,7 @@ func setUpSSL(awsSession *session.Session, domain string, createSSL bool) (strin
 		// or if it it headless, don't set up a cert
 		if terminal.IsTerminal(int(os.Stdout.Fd())) {
 			// talk to the user
-			errorText := fmt.Sprintf("Please specify if you'd like a ssl certificate or not: %q or %q", "--create-ssl", " --no-ssl")
+			errorText := fmt.Sprintf("Please specify if you'd like a ssl certificate or not: %q or %q", "--create-custom-ssl", " --no-ssl")
 			return "", errors.New(errorText)
 		} else {
 			// set up without ssl
