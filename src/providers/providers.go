@@ -10,16 +10,8 @@ type ProviderClient interface {
 	ValidateSettings() error
 }
 
-type DNSProvider interface {
-	CreateDNS(g GlobalFlags, c CreateFlags, cdnDomain string) error
-
-	Name() string
-	Flags() []cli.Flag
-	ValidateSettings() error
-}
-
 type FSProvider interface {
-	CreateFS(g GlobalFlags, c CreateFlags) error
+	CreateFS(g GlobalFlags, c CreateFlags) (fsDomain string, err error)
 	DeployFS(g GlobalFlags, d DeployFlags) error
 	RollbackFS(g GlobalFlags, r RollbackFlags) error
 
@@ -29,7 +21,15 @@ type FSProvider interface {
 }
 
 type CDNProvider interface {
-	CreateCDN(g GlobalFlags, c CreateFlags) (cdnDomain string, err error)
+	CreateCDN(g GlobalFlags, c CreateFlags, fsDomain string) (cdnDomain string, err error)
+
+	Name() string
+	Flags() []cli.Flag
+	ValidateSettings() error
+}
+
+type DNSProvider interface {
+	CreateDNS(g GlobalFlags, c CreateFlags, cdnDomain string) error
 
 	Name() string
 	Flags() []cli.Flag

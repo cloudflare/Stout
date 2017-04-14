@@ -1,4 +1,4 @@
-package amazonprovider
+package amazon
 
 import (
 	"errors"
@@ -21,10 +21,11 @@ import (
 var Client client
 
 type client struct {
-	Key     string `yaml:"key"`
-	Secret  string `yaml:"secret"`
-	Region  string `yaml:"region"`
-	NewUser bool   `yaml:"newuser"`
+	Key       string `yaml:"key"`
+	Secret    string `yaml:"secret"`
+	Region    string `yaml:"region"`
+	NewUser   bool   `yaml:"new-user"`
+	CreateSSL bool   `yaml:"create-ssl"`
 }
 
 func (a *client) Name() string {
@@ -91,6 +92,11 @@ func (a *client) Flags() []cli.Flag {
 			Name:        "aws-new-user",
 			Usage:       "Create a seperate IAM user for this bucket and distribution",
 			Destination: &a.NewUser,
+		},
+		cli.BoolFlag{
+			Name:        "create-ssl",
+			Usage:       "Using AWS for a CDN, request a SSL/TLS certificate to support https. Using this command will require email validation to prove you own this domain",
+			Destination: &a.CreateSSL,
 		},
 	}
 }

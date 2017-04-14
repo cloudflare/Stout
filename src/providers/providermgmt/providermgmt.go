@@ -5,7 +5,8 @@ import (
 	"fmt"
 
 	"github.com/eagerio/Stout/src/providers"
-	"github.com/eagerio/Stout/src/providers/amazonprovider"
+	"github.com/eagerio/Stout/src/providers/amazon"
+	"github.com/eagerio/Stout/src/providers/cloudflare"
 	"github.com/urfave/cli"
 )
 
@@ -18,7 +19,8 @@ const (
 )
 
 var ProviderList = map[string]providers.ProviderClient{
-	amazonprovider.Client.Name(): &amazonprovider.Client,
+	amazon.Client.Name():     &amazon.Client,
+	cloudflare.Client.Name(): &cloudflare.Client,
 }
 
 func CreateCommandFlags() []cli.Flag {
