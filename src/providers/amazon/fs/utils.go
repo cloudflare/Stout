@@ -49,6 +49,7 @@ func copyFile(s3Session *s3.S3, domain string, from string, to string, contentTy
 	_, err := s3Session.CopyObject(&s3.CopyObjectInput{
 		Bucket:            aws.String(domain),
 		MetadataDirective: aws.String("REPLACE"),
+		Key:               aws.String(to),
 		ContentType:       aws.String(contentType),
 		CacheControl:      aws.String(fmt.Sprintf("public, max-age=%d", maxAge)),
 		ContentEncoding:   aws.String("gzip"),
