@@ -155,7 +155,7 @@ func createCFDistribution(cfSession *cloudfront.CloudFront, certificateARN strin
 				Quantity: aws.Int64(1),
 				Items: []*cloudfront.Origin{
 					{
-						DomainName: aws.String(domain + ".s3-website-" + awsRegion + ".aws.com"),
+						DomainName: aws.String(domain + ".s3-website-" + awsRegion + ".amazonaws.com"),
 						Id:         aws.String("S3-" + domain),
 						CustomHeaders: &cloudfront.CustomHeaders{
 							Quantity: aws.Int64(0),

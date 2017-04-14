@@ -3,6 +3,7 @@ package amazon
 import (
 	"errors"
 	"io/ioutil"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -25,7 +26,7 @@ type client struct {
 	Secret    string `yaml:"secret"`
 	Region    string `yaml:"region"`
 	NewUser   bool   `yaml:"new-user"`
-	CreateSSL bool   `yaml:"create-ssl"`
+	CreateSSL bool   `yaml:"create-custom-ssl"`
 }
 
 func (a *client) Name() string {
@@ -94,7 +95,7 @@ func (a *client) Flags() []cli.Flag {
 			Destination: &a.NewUser,
 		},
 		cli.BoolFlag{
-			Name:        "create-ssl",
+			Name:        "create-custom-ssl",
 			Usage:       "Using AWS for a CDN, request a SSL/TLS certificate to support https. Using this command will require email validation to prove you own this domain",
 			Destination: &a.CreateSSL,
 		},
@@ -102,14 +103,19 @@ func (a *client) Flags() []cli.Flag {
 }
 
 func (a *client) ValidateSettings() error {
+	var missingFlags []string
 	if a.Key == "" {
-		return errors.New("Missing aws-key flag")
+		missingFlags = append(missingFlags, "aws-key")
 	}
 	if a.Secret == "" {
-		return errors.New("Missing aws-secret flag")
+		missingFlags = append(missingFlags, "aws-secret")
 	}
 	if a.Region == "" {
-		return errors.New("Missing aws-region flag")
+		missingFlags = append(missingFlags, "aws-region")
+	}
+
+	if len(missingFlags) > 0 {
+		return errors.New("Missing " + strings.Join(missingFlags, " flag, ") + " flag")
 	}
 
 	err := a.SetupAWS()

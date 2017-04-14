@@ -39,14 +39,14 @@ func (c *client) Flags() []cli.Flag {
 func (c *client) ValidateSettings() error {
 	var missingFlags []string
 	if c.Email == "" {
-		missingFlags = append(missingFlags, "cf-email flag")
+		missingFlags = append(missingFlags, "cf-email")
 	}
 	if c.Key == "" {
-		missingFlags = append(missingFlags, "cf-key flag")
+		missingFlags = append(missingFlags, "cf-key")
 	}
 
 	if len(missingFlags) > 0 {
-		return errors.New("Missing " + strings.Join(missingFlags, ", "))
+		return errors.New("Missing " + strings.Join(missingFlags, " flag, ") + " flag")
 	}
 
 	err := c.setupCloudflare()
