@@ -12,24 +12,6 @@ import (
 	"github.com/urfave/cli"
 )
 
-type Options struct {
-	Files       string `yaml:"files"`
-	Root        string `yaml:"root"`
-	Dest        string `yaml:"dest"`
-	ConfigFile  string `yaml:"-"`
-	Env         string `yaml:"-"`
-	Domain      string `yaml:"domain"`
-	NoUser      bool   `yaml:"-"`
-	NoSSL       bool   `yaml:"-"`
-	CreateSSL   bool   `yaml:"-"`
-	DNSProvider string `yaml:"dns"`
-	FSProvider  string `yaml:"file-storage"`
-	CDNProvider string `yaml:"cdn"`
-	AWSKey      string `yaml:"key"`
-	AWSSecret   string `yaml:"secret"`
-	AWSRegion   string `yaml:"region"`
-}
-
 func formattedUsageText() string {
 	text := (`
 stout [global options] <command> [command options], or
@@ -113,18 +95,7 @@ func main() {
 		{
 			Name:  "create",
 			Usage: "Configure your CDN, File Storage, and DNS providers for usage with stout.",
-			Flags: append([]cli.Flag{
-				cli.BoolFlag{
-					Name:        "create-ssl",
-					Usage:       "Request a SSL/TLS certificate to support https. Using this command will require email validation to prove you own this domain",
-					Destination: &envHolder.CreateFlags.CreateSSL,
-				},
-				cli.BoolFlag{
-					Name:        "no-ssl",
-					Usage:       "Do not set up SSL/TLS certificates",
-					Destination: &envHolder.CreateFlags.NoSSL,
-				},
-			}, providermgmt.CreateCommandFlags()...),
+			Flags: providermgmt.CreateCommandFlags(),
 			Action: func(c *cli.Context) (err error) {
 				envHolder, err = utils.LoadEnvConfig(envHolder)
 				if err != nil {

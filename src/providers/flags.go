@@ -4,11 +4,11 @@ type ConfigHolder map[string]EnvHolder
 
 type EnvHolder struct {
 	Env           string
-	GlobalFlags   *GlobalFlags
-	CreateFlags   *CreateFlags
-	DeployFlags   *DeployFlags
-	RollbackFlags *RollbackFlags
-	ProviderFlags map[string]interface{}
+	GlobalFlags   *GlobalFlags           `yaml:"global"`
+	CreateFlags   *CreateFlags           `yaml:"create"`
+	DeployFlags   *DeployFlags           `yaml:"deploy"`
+	RollbackFlags *RollbackFlags         `yaml:"rollback"`
+	ProviderFlags map[string]interface{} `yaml:"providers"`
 }
 
 type GlobalFlags struct {
@@ -21,10 +21,7 @@ type GlobalFlags struct {
 	CDN    string
 }
 
-type CreateFlags struct {
-	CreateSSL bool
-	NoSSL     bool
-}
+type CreateFlags struct{}
 
 type DeployFlags struct {
 	Files string

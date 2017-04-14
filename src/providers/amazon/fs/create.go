@@ -1,6 +1,8 @@
 package fs
 
 import (
+	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -55,7 +57,7 @@ func CreateS3User(iamSession *iam.IAM, domain string) (key iam.AccessKey, err er
 	return *keyResp.AccessKey, nil
 }
 
-func CreateS3Bucket(s3Session *s3.S3, domain string, region string) error {
+func CreateS3Bucket(s3Session *s3.S3, domain string, region string) (string, error) {
 	var bucketConfig *s3.CreateBucketConfiguration
 	if region != "us-east-1" {
 		bucketConfig = &s3.CreateBucketConfiguration{
@@ -69,7 +71,7 @@ func CreateS3Bucket(s3Session *s3.S3, domain string, region string) error {
 		CreateBucketConfiguration: bucketConfig,
 	})
 	if err != nil && err.Error() != s3.ErrCodeBucketAlreadyExists {
-		return err
+		return "", err
 	}
 
 	_, err = s3Session.PutBucketWebsite(&s3.PutBucketWebsiteInput{
@@ -84,7 +86,7 @@ func CreateS3Bucket(s3Session *s3.S3, domain string, region string) error {
 		},
 	})
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	_, err = s3Session.PutBucketPolicy(&s3.PutBucketPolicyInput{
@@ -106,8 +108,8 @@ func CreateS3Bucket(s3Session *s3.S3, domain string, region string) error {
 		),
 	})
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return fmt.Sprintf("%s.s3-website-%s.amazonaws.com", domain, region), nil
 }

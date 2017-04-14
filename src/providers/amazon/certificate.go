@@ -1,4 +1,4 @@
-package amazonprovider
+package amazon
 
 import (
 	"errors"
@@ -189,55 +189,48 @@ func requestCertificate(acmService *acm.ACM, domain string) ([]string, error) {
 }
 
 // Set up ssl/tls certificates
-func setUpSSL(awsSession *session.Session, domain string, createSSL bool, noSSL bool) (string, error) {
-	if createSSL && noSSL {
-		return "", errors.New("You have specified conflicting options: please choose either --no-ssl or --create-ssl.")
-	}
+func setUpSSL(awsSession *session.Session, domain string, createSSL bool) (string, error) {
 
 	// if the person wants ssl certificates
-	if !noSSL {
-		acmService := acm.New(awsSession)
-		certificateARN, err := findMatchingCertificate(acmService, domain, createSSL)
+	acmService := acm.New(awsSession)
+	certificateARN, err := findMatchingCertificate(acmService, domain, createSSL)
+
+	if err != nil {
+		return "", errors.New("Could not list ACM certificates while trying to find one to use")
+	}
+
+	// if there is a certificate found
+	if certificateARN != "" {
+		//is there a certificate
+		err := validateCertificate(acmService, certificateARN)
 
 		if err != nil {
-			return "", errors.New("Could not list ACM certificates while trying to find one to use")
+			return "", err
 		}
+		fmt.Printf("Using certificate with ARN: %q\n", certificateARN)
+		return certificateARN, nil
+	}
 
-		// if there is a certificate found
-		if certificateARN != "" {
-			//is there a certificate
-			err := validateCertificate(acmService, certificateARN)
-
-			if err != nil {
-				return "", err
-			}
-			fmt.Printf("Using certificate with ARN: %q\n", certificateARN)
-			return certificateARN, nil
+	// no certificate was found, create or ask the user
+	if createSSL {
+		fmt.Println("No certificate found to use, creating a new one.")
+		validationEmails, err := requestCertificate(acmService, domain)
+		if err != nil {
+			return "", err
+		}
+		errorText := fmt.Sprintf("Please check one of the email addresses below to confirm your new SSL/TLS certificate and run this command again. \n\t- %s", strings.Join(validationEmails, "\n\t- "))
+		return "", errors.New(errorText)
+	} else {
+		// no certificate wes found and nothing was specified.
+		// have a conversation with the user asking what they want to do
+		// or if it it headless, don't set up a cert
+		if terminal.IsTerminal(int(os.Stdout.Fd())) {
+			// talk to the user
+			errorText := fmt.Sprintf("Please specify if you'd like a ssl certificate or not: %q or %q", "--create-ssl", " --no-ssl")
+			return "", errors.New(errorText)
 		} else {
-			// no certificate was found, create or ask the user
-			if createSSL {
-				fmt.Println("No certificate found to use, creating a new one.")
-				validationEmails, err := requestCertificate(acmService, domain)
-				if err != nil {
-					return "", err
-				}
-				errorText := fmt.Sprintf("Please check one of the email addresses below to confirm your new SSL/TLS certificate and run this command again. \n\t- %s", strings.Join(validationEmails, "\n\t- "))
-				return "", errors.New(errorText)
-			} else {
-				// no certificate wes found and nothing was specified.
-				// have a conversation with the user asking what they want to do
-				// or if it it headless, don't set up a cert
-				if terminal.IsTerminal(int(os.Stdout.Fd())) {
-					// talk to the user
-					errorText := fmt.Sprintf("Please specify if you'd like a ssl certificate or not: %q or %q", "--create-ssl", " --no-ssl")
-					return "", errors.New(errorText)
-				} else {
-					// set up without ssl
-					return "", nil
-				}
-			}
+			// set up without ssl
+			return "", nil
 		}
 	}
-	// --no-ssl
-	return "", nil
 }

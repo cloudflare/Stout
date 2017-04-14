@@ -41,24 +41,25 @@ func Create(g providers.GlobalFlags, c providers.CreateFlags) error {
 
 	// during the create phase, the domain name for the cdn
 	// needs to be provided to the dns
-	if err := fsProviderTyped.CreateFS(g, c); err != nil {
-		return err
-	}
-	fmt.Println()
-
-	cdnDomain, err := cdnProviderTyped.CreateCDN(g, c)
+	fmt.Printf("Creating FS with %s...\n", fsProviderTyped.Name())
+	fsDomain, err := fsProviderTyped.CreateFS(g, c)
 	if err != nil {
 		return err
 	}
 	fmt.Println()
 
+	fmt.Printf("Creating CDN with %s...\n", cdnProviderTyped.Name())
+	cdnDomain, err := cdnProviderTyped.CreateCDN(g, c, fsDomain)
+	if err != nil {
+		return err
+	}
+	fmt.Println()
+
+	fmt.Printf("Creating DNS with %s...\n", dnsProviderTyped.Name())
 	if err := dnsProviderTyped.CreateDNS(g, c, cdnDomain); err != nil {
 		return err
 	}
 	fmt.Println()
 
-	fmt.Println("You can begin deploying now, but it can take up to twenty minutes for your site to begin to work")
-	fmt.Println("Depending on the configuration of your site, you might need to set the 'root', 'dest' or 'files' options to get your deploys working as you wish.  See the README for details.")
-	fmt.Println("It's also a good idea to look into the 'env' option, as in real-world situations it usually makes sense to have a development and/or staging site for each of your production sites.")
 	return nil
 }
