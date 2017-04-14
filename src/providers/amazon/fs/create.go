@@ -81,7 +81,7 @@ func CreateS3Bucket(s3Session *s3.S3, domain string, region string) (string, err
 				Suffix: aws.String("index.html"),
 			},
 			ErrorDocument: &s3.ErrorDocument{
-				Key: aws.String("index.html"),
+				Key: aws.String("404.html"),
 			},
 		},
 	})
