@@ -345,7 +345,11 @@ func deployHTML(s3Session *s3.S3, domain string, root string, dest string, id st
 	})
 
 	log.Println("Copying", permPath, "to", curPath)
-	copyFile(s3Session, domain, permPath, curPath, "text/html; charset=utf-8", LIMITED)
+
+	err = copyFile(s3Session, domain, permPath, curPath, "text/html; charset=utf-8", LIMITED)
+	if err != nil {
+		panic(err)
+	}
 }
 
 // List all files to be acted upon from the root and glob patterns

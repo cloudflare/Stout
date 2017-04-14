@@ -49,7 +49,10 @@ func Rollback(s3Session *s3.S3, domain string, dest string, version string) erro
 			log.Printf("Aliasing %s to %s", path, newPath)
 
 			//replace old files with new prefixed files in root
-			copyFile(s3Session, domain, path, newPath, "text/html", LIMITED)
+			err := copyFile(s3Session, domain, path, newPath, "text/html", LIMITED)
+			if err != nil {
+				panic(err)
+			}
 
 			count++
 		}(file)
