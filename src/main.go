@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/eagerio/Stout/src/actions"
 	"github.com/eagerio/Stout/src/config"
@@ -12,29 +11,6 @@ import (
 	"github.com/eagerio/Stout/src/utils"
 	"github.com/urfave/cli"
 )
-
-func formattedUsageText() string {
-	text := (`
-stout [global options] <command> [command options], or
-stout help <command>, to learn more about a subcommand
-
-Example Usage:
-
-To create a site which will be hosted at my.awesome.website:
-  stout create --fs=amazon --cdn=amazon --dns=amazon --domain=my.awesome.website --key=AWS_KEY --secret=AWS_SECRET
-
-To deploy the current folder to the root of the my.awesome.website site:
-  stout deploy --fs=amazon --domain=my.awesome.website --key=AWS_KEY --secret=AWS_SECRET
-
-To rollback to a specific deploy:
-  stout rollback --fs=amazon --domain=my.awesome.website --key=AWS_KEY --secret=AWS_SECRET c4a22bf94de1
- `)
-
-	textArray := strings.Split(text, "\n")
-	formattedText := strings.Join(textArray[1:], "\n   ")
-
-	return formattedText
-}
 
 func main() {
 	envHolder := providers.EnvHolder{
@@ -92,7 +68,7 @@ func main() {
 	app.Name = "stout"
 	app.Version = "2.0.0"
 	app.Usage = "a reliable static website deploy tool"
-	app.UsageText = formattedUsageText()
+	app.UsageText = utils.FormattedUsageText()
 	app.Commands = []cli.Command{
 		{
 			Name:  "create",
