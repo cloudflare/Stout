@@ -25,12 +25,12 @@ func (c *client) Flags() []cli.Flag {
 	return []cli.Flag{
 		cli.StringFlag{
 			Name:        "cf-email",
-			Usage:       "The Cloudflare email to use",
+			Usage:       "Cloudflare account email",
 			Destination: &c.Email,
 		},
 		cli.StringFlag{
 			Name:        "cf-key",
-			Usage:       "The Cloudflare key to use",
+			Usage:       "Cloudflare account API key",
 			Destination: &c.Key,
 		},
 	}

@@ -3,10 +3,13 @@ package providermgmt
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/eagerio/Stout/src/providers"
 	"github.com/eagerio/Stout/src/providers/amazon"
 	"github.com/eagerio/Stout/src/providers/cloudflare"
+	"github.com/eagerio/Stout/src/providers/github"
+	"github.com/eagerio/Stout/src/utils"
 	"github.com/urfave/cli"
 )
 
@@ -21,6 +24,7 @@ const (
 var ProviderList = map[string]providers.ProviderClient{
 	amazon.Client.Name():     &amazon.Client,
 	cloudflare.Client.Name(): &cloudflare.Client,
+	github.Client.Name():     &github.Client,
 }
 
 func CreateCommandFlags() []cli.Flag {
@@ -57,7 +61,8 @@ func commandFlags(dns bool, fs bool, cdn bool) (flags []cli.Flag) {
 
 		if addFlags {
 			providerFlags := provider.Flags()
-			//TODO: Add provider.Name() to the beginning of each flag
+
+			flags = append(flags, utils.TitleFlag(strings.ToUpper(provider.Name())+" PROVIDER FLAGS:"))
 			flags = append(flags, providerFlags...)
 		}
 	}
