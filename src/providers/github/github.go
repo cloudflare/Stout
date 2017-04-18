@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"errors"
+	"os/exec"
 	"strings"
 
 	"golang.org/x/oauth2"
@@ -57,6 +58,11 @@ func (c *client) ValidateSettings() error {
 
 	if len(missingFlags) > 0 {
 		return errors.New("Missing " + strings.Join(missingFlags, " flag, ") + " flag")
+	}
+
+	cmd := exec.Command("command", "-v", "git")
+	if cmd.Run() != nil {
+		return errors.New("git must be installed to use the github provider.")
 	}
 
 	err := c.setup()
