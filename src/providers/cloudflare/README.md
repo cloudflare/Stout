@@ -1,14 +1,14 @@
 # cloudflare
 
-The cloudflare provider supports DNS and DNS with CDN (cloudflare CDN requires cloudflare DNS).
+The cloudflare provider supports DNS and DNS with CDN. This means that using cloudflare CDN requires using cloudflare DNS, but cloudflare DNS can be used with other CDN providers.
 
-There are no options required for this provider. Go to [cloudflare.com](https://www.cloudflare.com/a/overview) to create an account or change settings on an existing install.
+Go to [cloudflare.com](https://www.cloudflare.com/a/overview) to create an account or change settings on an existing install.
 
-<!-- ## Options
+## Options
 
-The `example-flag` boolean flag [...]. -->
+The `cf-email` and `cf-key` flags hold your account email and API key, respectively.
 
-<!-- ## Config
+## Config
 
 The providers section of an example config file using cloudflare could look like the following:
 
@@ -16,5 +16,6 @@ The providers section of an example config file using cloudflare could look like
 [...]
         providers:
                 cloudflare:
-                        opt: val
-``` -->
+                        email: email@example.com
+                        key: 4s2i3ax2y8e6dye13j20f9dx32
+```
