@@ -3,16 +3,18 @@ package actions
 import (
 	"errors"
 
+	"github.com/eagerio/Stout/src/actions/remotelogic"
+	"github.com/eagerio/Stout/src/providermgmt"
 	"github.com/eagerio/Stout/src/providers"
-	"github.com/eagerio/Stout/src/providers/providermgmt"
+	"github.com/eagerio/Stout/src/types"
 )
 
-func Deploy(g providers.GlobalFlags, d providers.DeployFlags) error {
+func Deploy(g types.GlobalFlags, d types.DeployFlags) error {
 	if g.FS == "" {
-		return errors.New("The --fs flag and value are required for the `deploy` command")
+		return errors.New("The --fs flag is required for the `deploy` command")
 	}
 
-	err, fsProvider := providermgmt.ValidateProviderType(g.FS, providermgmt.FS_PROVIDER_TYPE)
+	err, fsProvider := providermgmt.ValidateProviderType(g.FS, types.FS_PROVIDER)
 	if err != nil {
 		return err
 	}
@@ -22,9 +24,10 @@ func Deploy(g providers.GlobalFlags, d providers.DeployFlags) error {
 		return err
 	}
 
-	if err := fsProviderTyped.DeployFS(g, d); err != nil {
+	fsFuncs, err := fsProviderTyped.FSProviderFuncs(g)
+	if err != nil {
 		return err
 	}
 
-	return nil
+	return remotelogic.Deploy(fsFuncs, g, d)
 }

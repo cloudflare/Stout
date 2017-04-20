@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"github.com/eagerio/Stout/src/types"
 	"github.com/urfave/cli"
 )
 
@@ -11,9 +12,9 @@ type ProviderClient interface {
 }
 
 type FSProvider interface {
-	CreateFS(g GlobalFlags, c CreateFlags) (fsDomain string, err error)
-	DeployFS(g GlobalFlags, d DeployFlags) error
-	RollbackFS(g GlobalFlags, r RollbackFlags) error
+	CreateFS(g types.GlobalFlags, c types.CreateFlags) (fsDomain string, err error)
+
+	FSProviderFuncs(g types.GlobalFlags) (types.FSProviderFunctions, error)
 
 	Name() string
 	Flags() []cli.Flag
@@ -21,7 +22,7 @@ type FSProvider interface {
 }
 
 type CDNProvider interface {
-	CreateCDN(g GlobalFlags, c CreateFlags, fsDomain string) (cdnDomain string, err error)
+	CreateCDN(g types.GlobalFlags, c types.CreateFlags, fsDomain string) (cdnDomain string, err error)
 
 	Name() string
 	Flags() []cli.Flag
@@ -29,7 +30,9 @@ type CDNProvider interface {
 }
 
 type DNSProvider interface {
-	CreateDNS(g GlobalFlags, c CreateFlags, cdnDomain string) error
+	CreateDNS(g types.GlobalFlags, c types.CreateFlags, cdnDomain string) error
+
+	AddVerificationRecord(g types.GlobalFlags, c types.CreateFlags, recordType types.DNSRecordType, name string, value string) error
 
 	Name() string
 	Flags() []cli.Flag

@@ -6,18 +6,18 @@ import (
 
 	"github.com/eagerio/Stout/src/actions"
 	"github.com/eagerio/Stout/src/config"
-	"github.com/eagerio/Stout/src/providers"
-	"github.com/eagerio/Stout/src/providers/providermgmt"
+	"github.com/eagerio/Stout/src/providermgmt"
+	"github.com/eagerio/Stout/src/types"
 	"github.com/eagerio/Stout/src/utils"
 	"github.com/urfave/cli"
 )
 
 func main() {
-	envHolder := providers.EnvHolder{
-		GlobalFlags:   &providers.GlobalFlags{},
-		CreateFlags:   &providers.CreateFlags{},
-		DeployFlags:   &providers.DeployFlags{},
-		RollbackFlags: &providers.RollbackFlags{},
+	envHolder := types.EnvHolder{
+		GlobalFlags:   &types.GlobalFlags{},
+		CreateFlags:   &types.CreateFlags{},
+		DeployFlags:   &types.DeployFlags{},
+		RollbackFlags: &types.RollbackFlags{},
 	}
 
 	appFlags := []cli.Flag{
@@ -73,7 +73,14 @@ func main() {
 		{
 			Name:  "create",
 			Usage: "Configure your CDN, File Storage, and DNS providers for usage with stout.",
-			Flags: append(appFlags, providermgmt.CreateCommandFlags()...),
+			Flags: append(appFlags, append([]cli.Flag{
+				utils.TitleFlag("CREATE FLAGS:"),
+				cli.BoolFlag{
+					Name:        "domain-validation-help",
+					Usage:       "Have stout prompt you for your record type and value to update your DNS provider with the records needed for domain validation",
+					Destination: &envHolder.CreateFlags.DomainValidationHelp,
+				},
+			}, providermgmt.CreateCommandFlags()...)...),
 			Action: func(c *cli.Context) (err error) {
 				envHolder, err = config.LoadEnvConfig(envHolder)
 				if err != nil {

@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/eagerio/Stout/src/providers"
-	"github.com/eagerio/Stout/src/providers/providermgmt"
+	"github.com/eagerio/Stout/src/providermgmt"
+	"github.com/eagerio/Stout/src/types"
 	"github.com/imdario/mergo"
 	yaml "gopkg.in/yaml.v1"
 )
 
-func LoadEnvConfig(filledProfile providers.EnvHolder) (profile providers.EnvHolder, err error) {
-	t := providers.ConfigHolder{}
+func LoadEnvConfig(filledProfile types.EnvHolder) (profile types.EnvHolder, err error) {
+	t := types.ConfigHolder{}
 
 	configProvided := true
 	if filledProfile.GlobalFlags.Config == "" {
@@ -106,21 +106,40 @@ func LoadEnvConfig(filledProfile providers.EnvHolder) (profile providers.EnvHold
 		fmt.Println(string(d))
 	}
 
-	err = mergo.MergeWithOverwrite(profile.GlobalFlags, filledProfile.GlobalFlags)
-	if err != nil {
-		return filledProfile, err
+	if profile.GlobalFlags != nil {
+		err = mergo.MergeWithOverwrite(profile.GlobalFlags, filledProfile.GlobalFlags)
+		if err != nil {
+			return filledProfile, err
+		}
+	} else {
+		profile.GlobalFlags = filledProfile.GlobalFlags
 	}
-	err = mergo.MergeWithOverwrite(profile.CreateFlags, filledProfile.CreateFlags)
-	if err != nil {
-		return filledProfile, err
+
+	if profile.CreateFlags != nil {
+		err = mergo.MergeWithOverwrite(profile.CreateFlags, filledProfile.CreateFlags)
+		if err != nil {
+			return filledProfile, err
+		}
+	} else {
+		profile.CreateFlags = filledProfile.CreateFlags
 	}
-	err = mergo.MergeWithOverwrite(profile.DeployFlags, filledProfile.DeployFlags)
-	if err != nil {
-		return filledProfile, err
+
+	if profile.DeployFlags != nil {
+		err = mergo.MergeWithOverwrite(profile.DeployFlags, filledProfile.DeployFlags)
+		if err != nil {
+			return filledProfile, err
+		}
+	} else {
+		profile.DeployFlags = filledProfile.DeployFlags
 	}
-	err = mergo.MergeWithOverwrite(profile.RollbackFlags, filledProfile.RollbackFlags)
-	if err != nil {
-		return filledProfile, err
+
+	if profile.RollbackFlags != nil {
+		err = mergo.MergeWithOverwrite(profile.RollbackFlags, filledProfile.RollbackFlags)
+		if err != nil {
+			return filledProfile, err
+		}
+	} else {
+		profile.RollbackFlags = filledProfile.RollbackFlags
 	}
 
 	if filledProfile.GlobalFlags.Debug {
