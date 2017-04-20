@@ -1,8 +1,9 @@
-package fs
+package remotelogic
 
 import (
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -12,12 +13,12 @@ import (
 	"time"
 
 	"github.com/cenk/backoff"
+	"github.com/eagerio/Stout/src/types"
+	"github.com/eagerio/Stout/src/utils"
 	"golang.org/x/net/html"
 
 	"log"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/wsxiaoys/terminal/color"
 )
 
@@ -28,10 +29,17 @@ const (
 
 const UPLOAD_WORKERS = 20
 
-var NO_GZIP = []string{
-	"mp4",
-	"webm",
-	"ogg",
+// File reference
+type FileRef struct {
+	LocalPath    string
+	RemotePath   string
+	UploadedPath string // uploaded path includes the hash
+}
+
+// Instance of a file reference
+type FileInst struct {
+	File     *FileRef
+	InstPath string
 }
 
 type UploadFileRequest struct {
@@ -43,17 +51,17 @@ type UploadFileRequest struct {
 	CacheSeconds int
 }
 
-func uploadFile(s3Session *s3.S3, req UploadFileRequest) (remotePath string) {
+func uploadFileToProvider(fsFuncs types.FSProviderFunctions, req UploadFileRequest) (remotePath string) {
 	buffer := bytes.NewBuffer([]byte{})
 
 	compress := shouldCompress(req.Path)
 
 	if compress {
 		writer := gzip.NewWriter(buffer)
-		must(io.Copy(writer, req.Reader))
+		utils.Must(io.Copy(writer, req.Reader))
 		writer.Close()
 	} else {
-		must(io.Copy(buffer, req.Reader))
+		utils.Must(io.Copy(buffer, req.Reader))
 	}
 
 	data := buffer.Bytes()
@@ -70,17 +78,13 @@ func uploadFile(s3Session *s3.S3, req UploadFileRequest) (remotePath string) {
 	log.Printf("Uploading to %s in %s (%s) [%d]\n", dest, req.Bucket, hashPrefix, req.CacheSeconds)
 
 	op := func() error {
-		// We need to create a new reader each time, as we might be doing this more than once (if it fails)
-		// return req.Bucket.PutReader(dest, bytes.NewReader(data), int64(len(data)), guessContentType(dest)+"; charset=utf-8", s3.PublicRead, s3Opts)
-		_, err := s3Session.PutObject(&s3.PutObjectInput{
-			ACL:           aws.String(s3.BucketCannedACLPublicRead),
-			Body:          bytes.NewReader(data),
-			Bucket:        aws.String(req.Bucket),
-			ContentLength: aws.Int64(int64(len(data))),
-			ContentType:   aws.String(guessContentType(dest) + "; charset=utf-8"),
-			Key:           aws.String(dest),
+		return fsFuncs.UploadFile(types.UploadFileHolder{
+			Dest:         dest,
+			Body:         data,
+			MD5:          hash,
+			CacheSeconds: req.CacheSeconds,
+			ContentType:  guessContentType(req.Dest),
 		})
-		return err
 	}
 
 	back := backoff.NewExponentialBackOff()
@@ -89,28 +93,15 @@ func uploadFile(s3Session *s3.S3, req UploadFileRequest) (remotePath string) {
 	err := backoff.RetryNotify(op, back, func(err error, next time.Duration) {
 		log.Println("Error uploading", err, "retrying in", next)
 	})
-	panicIf(err)
+	utils.PanicIf(err)
 
 	return dest
 }
 
-// File reference
-type FileRef struct {
-	LocalPath    string
-	RemotePath   string
-	UploadedPath string // uploaded path includes the hash
-}
-
-// Instance of a file reference
-type FileInst struct {
-	File     *FileRef
-	InstPath string
-}
-
-// Open files and pass the handle to uploadFile function
-func writeFiles(s3Session *s3.S3, domain string, dest string, includeHash bool, files chan *FileRef) {
+// Open files and pass the handle to uploadFileToProvider function
+func writeFiles(fsFuncs types.FSProviderFunctions, domain string, dest string, includeHash bool, files chan *FileRef) {
 	for file := range files {
-		handle := must(os.Open(file.LocalPath)).(*os.File)
+		handle := utils.Must(os.Open(file.LocalPath)).(*os.File)
 		defer handle.Close()
 
 		// The presence of hash determines the expiration
@@ -129,7 +120,7 @@ func writeFiles(s3Session *s3.S3, domain string, dest string, includeHash bool, 
 			panic(err)
 		}
 
-		(*file).UploadedPath = uploadFile(s3Session, UploadFileRequest{
+		(*file).UploadedPath = uploadFileToProvider(fsFuncs, UploadFileRequest{
 			Bucket:       domain,
 			Reader:       handle,
 			Path:         partialPath,
@@ -141,15 +132,15 @@ func writeFiles(s3Session *s3.S3, domain string, dest string, includeHash bool, 
 }
 
 // Deploy/upload files consurently
-func deployFiles(s3Session *s3.S3, domain string, dest string, includeHash bool, files []*FileRef) {
+func deployFiles(fsFuncs types.FSProviderFunctions, domain string, dest string, includeHash bool, files []*FileRef) {
 	ch := make(chan *FileRef)
 
-	wg := new(sync.WaitGroup)
+	wait := new(sync.WaitGroup)
 	for i := 0; i < UPLOAD_WORKERS; i++ {
-		wg.Add(1)
+		wait.Add(1)
 		go func() {
-			writeFiles(s3Session, domain, dest, includeHash, ch)
-			wg.Done()
+			writeFiles(fsFuncs, domain, dest, includeHash, ch)
+			wait.Done()
 		}()
 	}
 
@@ -161,10 +152,9 @@ func deployFiles(s3Session *s3.S3, domain string, dest string, includeHash bool,
 
 		ch <- file
 	}
-
 	close(ch)
 
-	wg.Wait()
+	wait.Wait()
 }
 
 func addFiles(form uint8, parent *html.Node, files []string) {
@@ -204,10 +194,10 @@ func addFiles(form uint8, parent *html.Node, files []string) {
 
 // Render HTML file
 func renderHTML(file HTMLFile) string {
-	handle := must(os.Open(file.File.LocalPath)).(*os.File)
+	handle := utils.Must(os.Open(file.File.LocalPath)).(*os.File)
 	defer handle.Close()
 
-	doc := must(html.Parse(handle)).(*html.Node)
+	doc := utils.Must(html.Parse(handle)).(*html.Node)
 
 	var f func(*html.Node)
 	f = func(n *html.Node) {
@@ -221,7 +211,7 @@ func renderHTML(file HTMLFile) string {
 				for i, a := range n.Attr {
 					if a.Key == "src" {
 						//find the link from the dependencies and replace
-						for _, dep := range file.Deps {
+						for _, dep := range file.Dependencies {
 							if dep.InstPath == a.Val {
 								n.Attr[i].Val = formatHref(dep.File.UploadedPath)
 								break
@@ -246,7 +236,7 @@ func renderHTML(file HTMLFile) string {
 				// If it is a link replace
 				for i, a := range n.Attr {
 					if a.Key == "href" {
-						for _, dep := range file.Deps {
+						for _, dep := range file.Dependencies {
 							if dep.InstPath == a.Val {
 								n.Attr[i].Val = formatHref(dep.File.UploadedPath)
 								break
@@ -260,7 +250,7 @@ func renderHTML(file HTMLFile) string {
 	f(doc)
 
 	buf := bytes.NewBuffer([]byte{})
-	panicIf(html.Render(buf, doc))
+	utils.PanicIf(html.Render(buf, doc))
 
 	return buf.String()
 }
@@ -270,10 +260,10 @@ func renderHTML(file HTMLFile) string {
 func parseHTML(path string) (files []string, base string) {
 	files = make([]string, 0)
 
-	handle := must(os.Open(path)).(*os.File)
+	handle := utils.Must(os.Open(path)).(*os.File)
 	defer handle.Close()
 
-	doc := must(html.Parse(handle)).(*html.Node)
+	doc := utils.Must(html.Parse(handle)).(*html.Node)
 
 	var f func(*html.Node)
 	// loop to go through all nodes of the html file
@@ -325,7 +315,7 @@ func parseHTML(path string) (files []string, base string) {
 }
 
 // deploy html to its permanent hashed path and copy them outside for public
-func deployHTML(s3Session *s3.S3, domain string, root string, dest string, id string, file HTMLFile) {
+func deployHTML(fsFuncs types.FSProviderFunctions, domain string, root string, dest string, id string, file HTMLFile) {
 	data := renderHTML(file)
 
 	internalPath, err := filepath.Rel(root, file.File.LocalPath)
@@ -333,23 +323,25 @@ func deployHTML(s3Session *s3.S3, domain string, root string, dest string, id st
 		panic(err)
 	}
 
-	permPath := joinPath(dest, id, internalPath)
-	curPath := joinPath(dest, internalPath)
+	fromPath := joinPath(dest, id, internalPath)
+	toPath := joinPath(dest, internalPath)
 
-	uploadFile(s3Session, UploadFileRequest{
+	uploadFileToProvider(fsFuncs, UploadFileRequest{
 		Bucket:       domain,
 		Reader:       strings.NewReader(data),
-		Path:         permPath,
+		Dest:         fromPath,
 		IncludeHash:  false,
 		CacheSeconds: FOREVER,
 	})
 
-	log.Println("Copying", permPath, "to", curPath)
+	log.Println("Copying", fromPath, "to", toPath)
 
-	err = copyFile(s3Session, domain, permPath, curPath, "text/html; charset=utf-8", LIMITED)
-	if err != nil {
-		panic(err)
-	}
+	utils.PanicIf(fsFuncs.CopyFile(types.CopyFileHolder{
+		Source:       fromPath,
+		Dest:         toPath,
+		ContentType:  "text/html; charset=utf-8",
+		CacheSeconds: LIMITED,
+	}))
 }
 
 // List all files to be acted upon from the root and glob patterns
@@ -364,14 +356,14 @@ func expandFiles(root string, glob string) []string {
 			pattern = joinPath(root, pattern)
 		}
 
-		list := must(filepath.Glob(pattern)).([]string)
+		list := utils.Must(filepath.Glob(pattern)).([]string)
 
 		for _, file := range list {
-			info := must(os.Stat(file)).(os.FileInfo)
+			info := utils.Must(os.Stat(file)).(os.FileInfo)
 
 			if info.IsDir() {
 				filepath.Walk(file, func(path string, info os.FileInfo, err error) error {
-					panicIf(err)
+					utils.PanicIf(err)
 
 					if !info.IsDir() {
 						out = append(out, path)
@@ -387,93 +379,13 @@ func expandFiles(root string, glob string) []string {
 	return out
 }
 
-// Get file references from the options
-func listFiles(root string, files string, dest string) []*FileRef {
-	filePaths := expandFiles(root, files)
-
-	fileObjects := make([]*FileRef, len(filePaths))
-	for i, path := range filePaths {
-		remotePath := joinPath(dest, mustString(filepath.Rel(root, path)))
-
-		for strings.HasPrefix(remotePath, "../") {
-			remotePath = remotePath[3:]
-		}
-
-		fileObjects[i] = &FileRef{
-			LocalPath:  path,
-			RemotePath: remotePath,
-		}
-	}
-
-	return fileObjects
-}
-
-func ignoreFiles(full []*FileRef, rem []*FileRef) []*FileRef {
-	out := make([]*FileRef, 0, len(full))
-
-	for _, file := range full {
-		ignore := false
-		path := filepath.Clean(file.LocalPath)
-
-		for _, remFile := range rem {
-			if filepath.Clean(remFile.LocalPath) == path {
-				ignore = true
-				break
-			}
-		}
-
-		if !ignore {
-			out = append(out, file)
-		}
-	}
-
-	return out
-}
-
-func extractFileList(root string, pattern string) (files []string) {
-	files = make([]string, 0)
-
-	parts := strings.Split(pattern, ",")
-
-	for _, part := range parts {
-		matches, err := filepath.Glob(joinPath(root, part))
-		if err != nil {
-			panic(err)
-		}
-		if matches == nil {
-			panic(fmt.Sprintf("Pattern %s did not match any files", part))
-		}
-
-		files = append(files, matches...)
-	}
-
-	return files
-}
-
-// Pick out files with a specific extension
-func filesWithExtension(files []*FileRef, ext string) (outFiles []*FileRef) {
-	outFiles = make([]*FileRef, 0)
-	for _, file := range files {
-		if filepath.Ext(file.LocalPath) == ext {
-			outFiles = append(outFiles, file)
-		}
-	}
-
-	return
-}
-
-type HTMLFile struct {
-	File FileRef
-	Deps []FileInst
-	Base string
-}
-
-func (f HTMLFile) GetLocalPath() string {
-	return f.File.LocalPath
-}
-
 // Deploy main function
-func Deploy(s3Session *s3.S3, domain string, root string, files string, dest string) error {
+func Deploy(fsFuncs types.FSProviderFunctions, g types.GlobalFlags, d types.DeployFlags) error {
+	domain := g.Domain
+	root := d.Root
+	files := d.Files
+	dest := d.Dest
+
 	// list all files that match the glob pattern in the root
 	fileObjects := listFiles(root, files, dest)
 
@@ -499,10 +411,8 @@ func Deploy(s3Session *s3.S3, domain string, root string, files string, dest str
 			// get base if there is a base tag to set the default target for all links
 			paths, base := parseHTML(file.LocalPath)
 
-			// TODO(renandincer): make this error more clear
-			// https is included in the http prefix :)
 			if strings.HasPrefix(strings.ToLower(base), "http") || strings.HasPrefix(base, "//") {
-				panic("Absolute base tags are not supported")
+				return errors.New("Absolute base tags are not supported in Stout.")
 			}
 
 			if strings.HasSuffix(base, "/") {
@@ -510,41 +420,41 @@ func Deploy(s3Session *s3.S3, domain string, root string, files string, dest str
 			}
 
 			htmlFiles[i] = HTMLFile{
-				File: *file,
-				Deps: make([]FileInst, len(paths)),
-				Base: base,
+				File:         *file,
+				Dependencies: make([]FileInst, len(paths)),
+				Base:         base,
 			}
 
-			var dest string
-			if strings.HasPrefix(base, "/") && strings.HasPrefix(base, "/"+dest) {
-				dest = base
-			} else {
-				dest = joinPath(dest, base)
-			}
+			dest := joinPath(dest, base)
+			realRoot := joinPath(root, base)
 
-			var realRoot string
-			if strings.HasPrefix(base, "/") && strings.HasSuffix(root, base) {
-				realRoot = root
-			} else {
-				realRoot = joinPath(root, base)
+			if strings.HasPrefix(base, "/") {
+				if strings.HasPrefix(base, "/"+dest) {
+					dest = base
+				}
+
+				if strings.HasSuffix(root, base) {
+					realRoot = root
+				}
 			}
 
 			for j, path := range paths {
+				// get file from local path, put file in remote path
 				var local, remote string
-				//put file locations in dest and root
-				if strings.HasPrefix(path, "/") {
+				if strings.HasPrefix(path, "/") { // absolute link to bucket root
 					local = joinPath(root, path)
 					remote = joinPath(dest, path)
-				} else {
-					if strings.HasPrefix(base, "/") {
+				} else { // relative url (which can be affected by base tags)
+					if strings.HasPrefix(base, "/") { // base tag absolute to bucket root
 						local = joinPath(realRoot, path)
 						remote = joinPath(dest, path)
-					} else {
+					} else { // base tag relative to current folder
 						local = joinPath(root, rel, base, path)
 						remote = joinPath(dest, rel, base, path)
 					}
 				}
-				//TODO(renandincer): would this work if the reference is two levels down?
+
+				// notice `for` and not `if`
 				for strings.HasPrefix(remote, "../") {
 					remote = remote[3:]
 				}
@@ -553,22 +463,17 @@ func Deploy(s3Session *s3.S3, domain string, root string, files string, dest str
 				ref, ok := inclFiles[local]
 				if !ok {
 					ref = &FileRef{
-						LocalPath:  local,
-						RemotePath: remote,
-
-						// Filled in after the deploy:
-						UploadedPath: "",
+						LocalPath:    local,
+						RemotePath:   remote,
+						UploadedPath: "", // Filled in after the deploy:
 					}
-					// if not add it
 					inclFiles[local] = ref
 				}
 
-				use := FileInst{
+				htmlFiles[i].Dependencies[j] = FileInst{
 					File:     ref,
 					InstPath: path,
 				}
-
-				htmlFiles[i].Deps[j] = use
 			}
 		}
 
@@ -581,20 +486,20 @@ func Deploy(s3Session *s3.S3, domain string, root string, files string, dest str
 		}
 
 		// hash all the paths of all html files and dependencies together
-		hashPaths := make([]string, 0)
+		filepaths := make([]string, 0)
 		for _, item := range inclFileList {
-			hashPaths = append(hashPaths, item.LocalPath)
+			filepaths = append(filepaths, item.LocalPath)
 		}
 		for _, item := range htmlFiles {
-			hashPaths = append(hashPaths, item.File.LocalPath)
+			filepaths = append(filepaths, item.File.LocalPath)
 		}
-		hash := hashFiles(hashPaths)
+		hash := hashFilepaths(filepaths)
 		id = hash[:12] //this will go to the html folder
 
-		deployFiles(s3Session, domain, dest, true, inclFileList)
+		deployFiles(fsFuncs, domain, dest, true, inclFileList)
 	}
 	//deploy all files requested except the html files
-	deployFiles(s3Session, domain, dest, false, ignoreFiles(fileObjects, htmlFileRefs))
+	deployFiles(fsFuncs, domain, dest, false, ignoreFiles(fileObjects, htmlFileRefs))
 
 	//deploy html
 	if len(htmlFileRefs) != 0 {
@@ -608,7 +513,7 @@ func Deploy(s3Session *s3.S3, domain string, root string, files string, dest str
 
 			go func(file HTMLFile) {
 				defer wg.Done()
-				deployHTML(s3Session, domain, root, dest, id, file)
+				deployHTML(fsFuncs, domain, root, dest, id, file)
 			}(file)
 		}
 

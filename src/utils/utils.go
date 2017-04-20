@@ -2,24 +2,30 @@ package utils
 
 import (
 	"errors"
-	"flag"
 	"fmt"
-	"strings"
-
-	"github.com/urfave/cli"
 )
 
-type titleFlag struct {
-	Title  string
-	Hidden bool
+// Catch errors and panic if there is an error
+func PanicIf(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
 
-func (t titleFlag) Apply(*flag.FlagSet) {}
-func (t titleFlag) String() string      { return "\n" + t.Title }
-func (t titleFlag) GetName() string     { return "" }
-
-func TitleFlag(title string) cli.Flag {
-	return titleFlag{Title: title}
+// Catch errors and panic if there is an error
+func Must(val interface{}, err error) interface{} {
+	if err != nil {
+		panic(err)
+	}
+	return val
+}
+func MustString(val string, err error) string {
+	PanicIf(err)
+	return val
+}
+func MustInt(val int, err error) int {
+	PanicIf(err)
+	return val
 }
 
 func ErrorMerge(str string, err error) error {
@@ -40,27 +46,4 @@ func PanicsToErrors(debugMode bool, f func() error) (err error) {
 	}
 
 	return f()
-}
-
-func FormattedUsageText() string {
-	text := (`
-stout [global options] <command> [command options], or
-stout help <command>, to learn more about a subcommand
-
-Example Usage:
-
-To create a site which will be hosted at my.awesome.website:
-  stout create --fs=amazon --cdn=amazon --dns=amazon --domain=my.awesome.website --key=AWS_KEY --secret=AWS_SECRET
-
-To deploy the current folder to the root of the my.awesome.website site:
-  stout deploy --fs=amazon --domain=my.awesome.website --key=AWS_KEY --secret=AWS_SECRET
-
-To rollback to a specific deploy:
-  stout rollback --fs=amazon --domain=my.awesome.website --key=AWS_KEY --secret=AWS_SECRET c4a22bf94de1
- `)
-
-	textArray := strings.Split(text, "\n")
-	formattedText := strings.Join(textArray[1:], "\n   ")
-
-	return formattedText
 }

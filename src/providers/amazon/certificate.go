@@ -3,14 +3,12 @@ package amazon
 import (
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/acm"
-	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/net/publicsuffix"
 )
 
@@ -19,7 +17,6 @@ import (
 // (see https://github.com/EagerIO/Stout/issues/20#issuecomment-232174716)
 // or, if there is no certificate with the domain requested, return ""
 func findMatchingCertificate(acmService *acm.ACM, domain string, createSSL bool) (string, error) {
-
 	// list issued and pending certificates
 	certificatesResponse, err := acmService.ListCertificates(&acm.ListCertificatesInput{
 		CertificateStatuses: []*string{
@@ -30,6 +27,7 @@ func findMatchingCertificate(acmService *acm.ACM, domain string, createSSL bool)
 	if err != nil {
 		return "", err
 	}
+
 	//if there are no certificates, return nil
 	if len(certificatesResponse.CertificateSummaryList) == 0 {
 		return "", nil
@@ -93,13 +91,13 @@ func findMatchingCertificate(acmService *acm.ACM, domain string, createSSL bool)
 		if err != nil {
 			return "", err
 		}
-		wildCardOfGivenDomain := strings.Join([]string{"*", wildcardDomainTLDPlusOne}, ".")
 
+		wildCardOfGivenDomain := strings.Join([]string{"*", wildcardDomainTLDPlusOne}, ".")
 		if wildCardOfGivenDomain == domainName {
 			return certificateARN, nil
 		}
-
 	}
+
 	return "", nil
 }
 
@@ -108,7 +106,6 @@ func validateCertificate(acmService *acm.ACM, certificateARN string) error {
 	certificateDetail, err := acmService.DescribeCertificate(&acm.DescribeCertificateInput{
 		CertificateArn: aws.String(certificateARN),
 	})
-
 	if err != nil {
 		return err
 	}
@@ -124,9 +121,9 @@ func validateCertificate(acmService *acm.ACM, certificateARN string) error {
 		}
 		vEmails := strings.Join(validationEmails, "\n\t- ")
 		return fmt.Errorf("Certificate not issued yet. Please check one of the following emails or use --no-ssl:\n\t- %s", vEmails)
-	} else {
-		return nil
 	}
+
+	return nil
 }
 
 // request a new certificate from ACM
@@ -190,11 +187,9 @@ func requestCertificate(acmService *acm.ACM, domain string) ([]string, error) {
 
 // Set up ssl/tls certificates
 func setUpSSL(awsSession *session.Session, domain string, createSSL bool) (string, error) {
-
 	// if the person wants ssl certificates
 	acmService := acm.New(awsSession)
 	certificateARN, err := findMatchingCertificate(acmService, domain, createSSL)
-
 	if err != nil {
 		return "", errors.New("Could not list ACM certificates while trying to find one to use")
 	}
@@ -203,15 +198,14 @@ func setUpSSL(awsSession *session.Session, domain string, createSSL bool) (strin
 	if certificateARN != "" {
 		//is there a certificate
 		err := validateCertificate(acmService, certificateARN)
-
 		if err != nil {
 			return "", err
 		}
+
 		fmt.Printf("Using certificate with ARN: %q\n", certificateARN)
 		return certificateARN, nil
 	}
 
-	// no certificate was found, create or ask the user
 	if createSSL {
 		fmt.Println("No certificate found to use, creating a new one.")
 		validationEmails, err := requestCertificate(acmService, domain)
@@ -220,17 +214,8 @@ func setUpSSL(awsSession *session.Session, domain string, createSSL bool) (strin
 		}
 		errorText := fmt.Sprintf("Please check one of the email addresses below to confirm your new SSL/TLS certificate and run this command again. \n\t- %s", strings.Join(validationEmails, "\n\t- "))
 		return "", errors.New(errorText)
-	} else {
-		// no certificate wes found and nothing was specified.
-		// have a conversation with the user asking what they want to do
-		// or if it it headless, don't set up a cert
-		if terminal.IsTerminal(int(os.Stdout.Fd())) {
-			// talk to the user
-			errorText := fmt.Sprintf("Please specify if you'd like a ssl certificate or not: %q or %q", "--create-custom-ssl", " --no-ssl")
-			return "", errors.New(errorText)
-		} else {
-			// set up without ssl
-			return "", nil
-		}
 	}
+
+	// set up without custom ssl
+	return "", nil
 }

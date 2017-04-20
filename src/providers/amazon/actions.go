@@ -4,16 +4,15 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/eagerio/Stout/src/providers"
 	"github.com/eagerio/Stout/src/providers/amazon/cdn"
 	"github.com/eagerio/Stout/src/providers/amazon/dns"
 	"github.com/eagerio/Stout/src/providers/amazon/fs"
+	"github.com/eagerio/Stout/src/types"
 )
 
-// Create a route53 route
-func (a *client) CreateDNS(g providers.GlobalFlags, c providers.CreateFlags, cdnDomainName string) error {
+func (a *client) CreateDNS(g types.GlobalFlags, c types.CreateFlags, cdnDomainName string) error {
 	fmt.Println("Adding Route")
-	err := dns.UpdateR53Route(r53Session, g.Domain, cdnDomainName)
+	err := dns.CreateR53Route(r53Session, g.Domain, cdnDomainName)
 	if err != nil {
 		return errors.New("Error adding route to Route53 DNS config\n" + err.Error())
 	}
@@ -21,8 +20,7 @@ func (a *client) CreateDNS(g providers.GlobalFlags, c providers.CreateFlags, cdn
 	return nil
 }
 
-// Create a new s3 bucket, optionally create a new user
-func (a *client) CreateFS(g providers.GlobalFlags, c providers.CreateFlags) (string, error) {
+func (a *client) CreateFS(g types.GlobalFlags, c types.CreateFlags) (string, error) {
 	fmt.Println("Getting/Creating S3 Bucket")
 	fsDomain, err := fs.CreateS3Bucket(s3Session, g.Domain, a.Region)
 	if err != nil {
@@ -45,8 +43,7 @@ func (a *client) CreateFS(g providers.GlobalFlags, c providers.CreateFlags) (str
 	return fsDomain, nil
 }
 
-// Create a new CloudFront distrbution
-func (a *client) CreateCDN(g providers.GlobalFlags, c providers.CreateFlags, fsDomain string) (string, error) {
+func (a *client) CreateCDN(g types.GlobalFlags, c types.CreateFlags, fsDomain string) (string, error) {
 	fmt.Println("Checking for available SSL/TLS certificates")
 	certificateARN, err := setUpSSL(awsSession, g.Domain, a.CreateSSL)
 	if err != nil {
@@ -66,12 +63,10 @@ func (a *client) CreateCDN(g providers.GlobalFlags, c providers.CreateFlags, fsD
 	return cdnDomainName, nil
 }
 
-// Deploy a new version
-func (a *client) DeployFS(g providers.GlobalFlags, d providers.DeployFlags) error {
-	return fs.Deploy(s3Session, g.Domain, d.Root, d.Files, d.Dest)
+func (a *client) FSProviderFuncs(g types.GlobalFlags) (types.FSProviderFunctions, error) {
+	return fs.FSProviderFuncs(s3Session, g.Domain)
 }
 
-// Deploy a new version
-func (a *client) RollbackFS(g providers.GlobalFlags, r providers.RollbackFlags) error {
-	return fs.Rollback(s3Session, g.Domain, r.Dest, r.Version)
+func (a *client) AddVerificationRecord(g types.GlobalFlags, c types.CreateFlags, recordType types.DNSRecordType, name string, value string) error {
+	return dns.AddVerificationRecord(r53Session, g.Domain, string(recordType), name, value)
 }

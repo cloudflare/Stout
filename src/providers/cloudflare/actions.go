@@ -7,34 +7,36 @@ import (
 	"golang.org/x/net/publicsuffix"
 
 	cloudflare "github.com/cloudflare/cloudflare-go"
-	"github.com/eagerio/Stout/src/providers"
+	"github.com/eagerio/Stout/src/types"
 )
 
 var skipDNS = false
 
-// Set up Cloudflare CDN
-func (a *client) CreateCDN(g providers.GlobalFlags, c providers.CreateFlags, fsDomain string) (string, error) {
+func (a *client) CreateCDN(g types.GlobalFlags, c types.CreateFlags, fsDomain string) (string, error) {
 	canCDN := g.DNS == a.Name()
 	if !canCDN {
 		return "", errors.New("Cloudflare cannot be used as a CDN without also being used as a DNS")
 	}
 
 	skipDNS = true
-	return "", create(api, g.Domain, true, fsDomain)
+	return "", create(api, g.Domain, true, string(types.CNAME_RECORD), g.Domain, fsDomain)
 }
 
-// Set up Cloudflare DNS
-func (a *client) CreateDNS(g providers.GlobalFlags, c providers.CreateFlags, cdnDomain string) error {
+func (a *client) CreateDNS(g types.GlobalFlags, c types.CreateFlags, cdnDomain string) error {
 	if skipDNS {
 		return nil
 	}
 
 	proxiable := g.CDN == a.Name()
-	return create(api, g.Domain, proxiable, cdnDomain)
+	return create(api, g.Domain, proxiable, string(types.CNAME_RECORD), g.Domain, cdnDomain)
+}
+
+func (a *client) AddVerificationRecord(g types.GlobalFlags, c types.CreateFlags, recordType types.DNSRecordType, name string, value string) error {
+	return create(api, g.Domain, false, string(recordType), name, value)
 }
 
 // One function to create CDN and DNS, since Cloudflare CDN depends on Cloudflare DNS
-func create(api *cloudflare.API, domain string, useCDN bool, endDomain string) error {
+func create(api *cloudflare.API, domain string, useCDN bool, recordType string, name string, value string) error {
 	zoneName, err := publicsuffix.EffectiveTLDPlusOne(domain)
 	if err != nil {
 		return err
@@ -45,37 +47,36 @@ func create(api *cloudflare.API, domain string, useCDN bool, endDomain string) e
 		return err
 	}
 
-	dnsRecords, err := api.DNSRecords(zoneID, cloudflare.DNSRecord{
-		Type:    "CNAME",
-		Name:    domain,
-		Content: endDomain,
-	})
-	if err != nil {
-		return err
-	}
+	// if it's not a TXT, then each name can only have one value
+	if recordType != string(types.CNAME_RECORD) {
+		dnsRecords, err := api.DNSRecords(zoneID, cloudflare.DNSRecord{
+			Type: recordType,
+			Name: name,
+		})
+		if err != nil {
+			return err
+		}
 
-	if len(dnsRecords) > 0 {
-		for _, record := range dnsRecords {
-			if record.Proxied != useCDN {
-				record.Proxied = useCDN
-				err := api.UpdateDNSRecord(zoneID, record.ID, record)
-				return err
-			} else {
+		if len(dnsRecords) > 0 {
+			for _, record := range dnsRecords {
+				if record.Proxied != useCDN || record.Content != value {
+					record.Proxied = useCDN
+					record.Content = value
+					return api.UpdateDNSRecord(zoneID, record.ID, record)
+				}
+
 				fmt.Println("Cloudflare already set up properly, skipping.")
+				return nil
 			}
-			return nil
 		}
 	}
 
 	_, err = api.CreateDNSRecord(zoneID, cloudflare.DNSRecord{
-		Type:    "CNAME",
-		Name:    domain,
-		Content: endDomain,
-		Proxied: true,
+		Type:    recordType,
+		Name:    name,
+		Content: value,
+		Proxied: useCDN,
 	})
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }

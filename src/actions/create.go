@@ -3,25 +3,27 @@ package actions
 import (
 	"errors"
 	"fmt"
+	"strings"
 
+	"github.com/eagerio/Stout/src/providermgmt"
 	"github.com/eagerio/Stout/src/providers"
-	"github.com/eagerio/Stout/src/providers/providermgmt"
+	"github.com/eagerio/Stout/src/types"
 )
 
-func Create(g providers.GlobalFlags, c providers.CreateFlags) error {
+func Create(g types.GlobalFlags, c types.CreateFlags) error {
 	if g.FS == "" || g.CDN == "" || g.DNS == "" {
-		return errors.New("The --dns, --fs, and --cdn flags and values are required for the `create` command")
+		return errors.New("The --dns, --fs, and --cdn flags are required for the `create` command")
 	}
 
-	err, fsProvider := providermgmt.ValidateProviderType(g.FS, providermgmt.FS_PROVIDER_TYPE)
+	err, fsProvider := providermgmt.ValidateProviderType(g.FS, types.FS_PROVIDER)
 	if err != nil {
 		return err
 	}
-	err, cdnProvider := providermgmt.ValidateProviderType(g.CDN, providermgmt.CDN_PROVIDER_TYPE)
+	err, cdnProvider := providermgmt.ValidateProviderType(g.CDN, types.CDN_PROVIDER)
 	if err != nil {
 		return err
 	}
-	err, dnsProvider := providermgmt.ValidateProviderType(g.DNS, providermgmt.DNS_PROVIDER_TYPE)
+	err, dnsProvider := providermgmt.ValidateProviderType(g.DNS, types.DNS_PROVIDER)
 	if err != nil {
 		return err
 	}
@@ -37,6 +39,37 @@ func Create(g providers.GlobalFlags, c providers.CreateFlags) error {
 	dnsProviderTyped, _ := dnsProvider.(providers.DNSProvider)
 	if err := dnsProviderTyped.ValidateSettings(); err != nil {
 		return err
+	}
+
+	if c.DomainValidationHelp {
+		var input string
+		fmt.Print("Enter record type to add for domain ownership validation (CNAME or TXT): ")
+		fmt.Scanln(&input)
+
+		input = strings.ToUpper(input)
+		recordType := types.DNSRecordType(input)
+
+		if recordType != types.CNAME_RECORD && recordType != types.TXT_RECORD {
+			return errors.New("Invalid record type, must be CNAME or TXT.")
+		}
+
+		var name string
+		if recordType == types.CNAME_RECORD {
+			fmt.Println("Enter record subdomain to assign a value to.")
+			fmt.Scanln(&name)
+		} else {
+			name = g.Domain
+		}
+
+		fmt.Println("Enter record value to assign (domain name for CNAME, or text string for TXT).")
+		fmt.Scanln(&input)
+
+		fmt.Println()
+		fmt.Printf("Adding DNS based domain name verification with %s...\n", fsProviderTyped.Name())
+		err := dnsProviderTyped.AddVerificationRecord(g, c, recordType, name, input)
+		if err != nil {
+			return err
+		}
 	}
 
 	// during the create phase, the domain name for the cdn
