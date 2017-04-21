@@ -17,13 +17,14 @@ func FSProviderFuncs(s3Session *s3.S3, domain string) (types.FSProviderFunctions
 	return types.FSProviderFunctions{
 		UploadFile: func(f types.UploadFileHolder) error {
 			_, err := s3Session.PutObject(&s3.PutObjectInput{
-				ACL:           aws.String(s3.BucketCannedACLPublicRead),
-				Body:          bytes.NewReader(f.Body),
-				Bucket:        aws.String(domain),
-				ContentLength: aws.Int64(int64(len(f.Body))),
-				ContentType:   aws.String(f.ContentType + "; charset=utf-8"),
-				Key:           aws.String(f.Dest),
-				CacheControl:  aws.String(fmt.Sprintf("public, max-age=%d", f.CacheSeconds)),
+				ACL:             aws.String(s3.BucketCannedACLPublicRead),
+				Body:            bytes.NewReader(f.Body),
+				Bucket:          aws.String(domain),
+				ContentLength:   aws.Int64(int64(len(f.Body))),
+				ContentType:     aws.String(f.ContentType + "; charset=utf-8"),
+				ContentEncoding: aws.String(f.ContentEncoding),
+				Key:             aws.String(f.Dest),
+				CacheControl:    aws.String(fmt.Sprintf("public, max-age=%d", f.CacheSeconds)),
 			})
 
 			return err
@@ -36,7 +37,7 @@ func FSProviderFuncs(s3Session *s3.S3, domain string) (types.FSProviderFunctions
 				Key:               aws.String(f.Dest),
 				ContentType:       aws.String(f.ContentType),
 				CacheControl:      aws.String(fmt.Sprintf("public, max-age=%d", f.CacheSeconds)),
-				ContentEncoding:   aws.String("gzip"),
+				ContentEncoding:   aws.String(f.ContentEncoding),
 				CopySource:        aws.String(joinPath(domain, f.Source)),
 				ACL:               aws.String(s3.BucketCannedACLPublicRead),
 			})
@@ -44,8 +45,9 @@ func FSProviderFuncs(s3Session *s3.S3, domain string) (types.FSProviderFunctions
 			return err
 		},
 
-		ListBucketFilepaths: func() ([]string, error) {
+		ListBucketFilepaths: func(path string) ([]string, error) {
 			list, err := s3Session.ListObjectsV2(&s3.ListObjectsV2Input{
+				Prefix:  aws.String(path),
 				Bucket:  aws.String(domain),
 				MaxKeys: aws.Int64(1000),
 			})
