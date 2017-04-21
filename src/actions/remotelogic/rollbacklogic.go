@@ -20,7 +20,7 @@ func Rollback(fsFuncs types.FSProviderFunctions, g types.GlobalFlags, r types.Ro
 	wait := sync.WaitGroup{}
 	count := 0
 
-	filepaths, err := fsFuncs.ListBucketFilepaths()
+	filepaths, err := fsFuncs.ListBucketFilepaths(prefix)
 	if err != nil {
 		return err
 	}
@@ -41,10 +41,11 @@ func Rollback(fsFuncs types.FSProviderFunctions, g types.GlobalFlags, r types.Ro
 
 			//replace old files with new prefixed files in root
 			utils.PanicIf(fsFuncs.CopyFile(types.CopyFileHolder{
-				Source:       path,
-				Dest:         newPath,
-				CacheSeconds: LIMITED,
-				ContentType:  "text/html",
+				Source:          path,
+				Dest:            newPath,
+				CacheSeconds:    LIMITED,
+				ContentType:     "text/html",
+				ContentEncoding: "gzip",
 			}))
 			count++
 		}(path)

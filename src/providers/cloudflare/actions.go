@@ -48,7 +48,7 @@ func create(api *cloudflare.API, domain string, useCDN bool, recordType string, 
 	}
 
 	// if it's not a TXT, then each name can only have one value
-	if recordType != string(types.CNAME_RECORD) {
+	if recordType != string(types.TXT_RECORD) {
 		dnsRecords, err := api.DNSRecords(zoneID, cloudflare.DNSRecord{
 			Type: recordType,
 			Name: name,

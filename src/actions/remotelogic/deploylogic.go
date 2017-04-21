@@ -337,10 +337,11 @@ func deployHTML(fsFuncs types.FSProviderFunctions, domain string, root string, d
 	log.Println("Copying", fromPath, "to", toPath)
 
 	utils.PanicIf(fsFuncs.CopyFile(types.CopyFileHolder{
-		Source:       fromPath,
-		Dest:         toPath,
-		ContentType:  "text/html; charset=utf-8",
-		CacheSeconds: LIMITED,
+		Source:          fromPath,
+		Dest:            toPath,
+		ContentType:     "text/html; charset=utf-8",
+		CacheSeconds:    LIMITED,
+		ContentEncoding: "gzip",
 	}))
 }
 
