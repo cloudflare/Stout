@@ -37,31 +37,31 @@ You can use the `create` command to create a new site.  It automatically creates
 credentials for an Amazon AWS account which has permissions to those services along with Route 53.
 
 ```sh
-stout create --bucket my.website.com --key MY_AWS_KEY --secret MY_AWS_SECRET
+stout create --domain my.website.com --key MY_AWS_KEY --secret MY_AWS_SECRET
 ```
 
 You can then deploy your project:
 
 ```sh
-stout deploy --bucket my.website.com --key MY_AWS_KEY --secret MY_AWS_SECRET
+stout deploy --domain my.website.com --key MY_AWS_KEY --secret MY_AWS_SECRET
 ```
 
 If your built files are in another directory, add the `--root` option:
 
 ```sh
-stout deploy --bucket my.website.com --key MY_AWS_KEY --secret MY_AWS_SECRET --root ./build
+stout deploy --domain my.website.com --key MY_AWS_KEY --secret MY_AWS_SECRET --root ./build
 ```
 
-If your bucket located not in the default region, which is us-east-1, add the `--region` option:
+If your bucket is not located in the default region, which is us-east-1, add the `--region` option:
 
 ```sh
-stout deploy --bucket my.website.com --key MY_AWS_KEY --secret MY_AWS_SECRET --region us-west-1
+stout deploy --domain my.website.com --key MY_AWS_KEY --secret MY_AWS_SECRET --region us-west-1
 ```
 
 If you don't want to deploy all the files in your folder, use the files argument.
 
 ```sh
-stout deploy --bucket my.website.com --key MY_AWS_KEY --secret MY_AWS_SECRET --root ./build --files "*.html,images/*"
+stout deploy --domain my.website.com --key MY_AWS_KEY --secret MY_AWS_SECRET --root ./build --files "*.html,images/*"
 ```
 
 Javascript and CSS included in your HTML files will always be included automatically.
@@ -69,7 +69,7 @@ Javascript and CSS included in your HTML files will always be included automatic
 The deploy command will give you a deploy id you can use in the future to rollback if you have to:
 
 ```sh
-stout rollback --bucket my.website.com --key MY_AWS_KEY --secret MY_AWS_SECRET a3b8ff290c33
+stout rollback --domain my.website.com --key MY_AWS_KEY --secret MY_AWS_SECRET a3b8ff290c33
 ```
 
 Eventually you'll probably want to move your config to a deploy.yaml file, rather than specifying it in the command every time.
@@ -103,38 +103,38 @@ You can configure the deploy tool with any combination of command line flags or 
 The options are:
 
 ##### `bucket`
-  The S3 bucket to deploy to.  In most configurations this bucket should be the origin for the CDN which actually serves your site.  It usually makes sense to make this the url you are going to host your site from (i.e. `"example.com"`)
-  	
+  The S3 bucket/domain to deploy to.  In most configurations this bucket should be the origin for the CDN which actually serves your site.  It usually makes sense to make this the url you are going to host your site from (i.e. `"example.com"`)
+
 ##### `config` ("./deploy.yaml")
   The location of a yaml file to read any otherwise unspecified configuration from.
-   
+
 ##### `dest` ("./")
   The destination directory to write files to in the S3 bucket.   For example if you wanted your this project to end up hosted at `yoursite.com/blog`, you would specify `--dest blog`.
-  	
+
 ##### `root` ("./")
  The local directory where the files to be uploaded lives.  It's common to make this your "./build" directory or the like.
- 
+
 ##### `files` ("*")
   Comma-seperated glob patterns of the files to be deployed (within the `--root`).  HTML files will be parsed, and the CSS/JS they point to will be included (versioned) automatically.  If you also include those files in your glob pattern they will be uploaded twice, once with a versioning hash in the URL, again without.
-  
+
   Be sure to include any additional files you would like deployed like images, videos, font files, etc.
 
   You can use relative paths which break out of the `root`.  If you prefix the path with `-/`, it will be interpreted as relative to the project directory, not the `root`.
-  	
+
 ##### `env`
   The config file can contain configurations for multiple environments (production, staging, etc.).  This specifies which is used.  See the "YAML Config" section for more information.
 
 ##### `key`
   The AWS key to use.  The create command will create an IAM user for each project with access only to the relevant bucket.  See the Permissions section for more information.
-  
+
 ##### `secret`
   The AWS secret of the provided key.
 
 ##### `region` ("us-east-1")
-  The AWS region the S3 bucket is located in. 
-  
+  The AWS region the S3 bucket is located in.
+
   If you are getting a `The bucket you are attempting to access must be addressed using the specified endpoint. Please send all future requests to this endpoint.` error, specify your bucket `--region`.
-   
+
 ### YAML Config
 
 You can provide a yaml file which specifies configuration defaults for the project being deployed.  We include this file in each project which will be deployed.  This file can have multiple configurations for different environments, along with a default section.
@@ -148,12 +148,12 @@ default:
 production:
   key: 'XXX'
   secret: 'XXX'
-  bucket: 'eager.io'
+  domain: 'eager.io'
 
 development:
   key: 'XXX'
   secret: 'XXX'
-  bucket: 'next.eager.io'
+  domain: 'next.eager.io'
 ```
 
 Replacing the "XXX"s with our actual credentials.
@@ -171,9 +171,9 @@ rollback --env development $DEPLOY_ID
 ```
 
 Where the deploy id is taken from the output of the deploy you wish to rollback to.
- 
+
 Our public projects use a similar config, but they specify the Amazon credentials as environment vars from the build system, passed in as flags:
- 
+
  ```bash
 deploy --env development --key $AMAZON_KEY_DEV --secret $AMAZON_SECRET_DEV
 ```
@@ -226,26 +226,25 @@ This is an example policy config which works:
         "s3:GetObject"
       ],
       "Resource": [
-        "arn:aws:s3:::BUCKET", "arn:aws:s3:::BUCKET/*"
+        "arn:aws:s3:::DOMAIN", "arn:aws:s3:::DOMAIN/*"
       ]
     }
   ]
 }
 ```
 
-Be sure to replace `BUCKET` with your bucket's actual name.
+Be sure to replace `DOMAIN` with your actual domain name.
 
 ### Deploying with CircleCI
- 
+
  Deploying with CircleCI is simply a matter of installing the deploy tool and running it as you would locally.  Here's an excerpt of a working circle.yml:
- 
+
  ```yaml
 dependencies:
   post:
-    - go get github.com/tools/godep
     - git clone git@github.com:EagerIO/Stout.git
-    - cd Stout; godep go build -o ../stout src/*.go
-    
+    - cd Stout; go build -o ../stout src/*.go
+
 deployment:
   development:
     branch: dev
@@ -257,11 +256,11 @@ deployment:
     commands:
       - ./stout deploy --env production --key $AMAZON_KEY_PROD --secret $AMAZON_SECRET_PROD
  ```
- 
+
 If you use environment vars for your credentials, make sure to add them to your Circle config.
- 
+
 If your repo is private, you can specify your Amazon key and secret in your deploy.yaml file, removing the need to specify them in the commands.
- 
+
 ### Caching
 
 All versioned files (include a hash of their contents in the path) are configured to cache for one year.  All unversioned files are configured to cache for 60 seconds.  This means it will take up to 60 seconds for users to see changes made to your site.
@@ -270,8 +269,8 @@ All versioned files (include a hash of their contents in the path) are configure
 
 Only JS and CSS files which are pointed to in HTML files are hashed, as we need to be able to update the HTML to point to our new, versioned, files.
 
-Any other file included in your `--files` argument will be uploaded, but not versioned, meaning a rollback will not effect these files.  This is something we'd like to improve. 
- 
+Any other file included in your `--files` argument will be uploaded, but not versioned, meaning a rollback will not effect these files.  This is something we'd like to improve.
+
 ### Consistency
 
 As the final step of the deploy is atomic, multiple actors can trigger deploys simultaneously without any danger of inconsistent state.  Whichever process triggers the final 'copy' step for a given file will win, with it's specified dependencies guarenteed to be used in their entirity.  Note that this consistency is only guarenteed on a per-html-file level, you may end up with some html files from one deployer, and others from another, but all files will point to their correct dependencies.
