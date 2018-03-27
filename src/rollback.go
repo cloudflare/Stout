@@ -11,7 +11,7 @@ import (
 
 func Rollback(options Options, version string) {
 	if s3Session == nil {
-		s3Session = openS3(options.AWSKey, options.AWSSecret, options.AWSRegion)
+		s3Session = openS3(options.AWSKey, options.AWSSecret, options.AWSRegion, options.S3Host)
 	}
 
 	bucket := s3Session.Bucket(options.Bucket)

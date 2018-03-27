@@ -232,7 +232,7 @@ func UpdateRoute(options Options, dist cloudfront.DistributionSummary) error {
 
 func Create(options Options) {
 	if s3Session == nil {
-		s3Session = openS3(options.AWSKey, options.AWSSecret, options.AWSRegion)
+		s3Session = openS3(options.AWSKey, options.AWSSecret, options.AWSRegion, options.S3Host)
 	}
 	if iamSession == nil {
 		iamSession = openIAM(options.AWSKey, options.AWSSecret, options.AWSRegion)

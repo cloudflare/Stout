@@ -4,14 +4,15 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/imdario/mergo"
-	"github.com/mitchellh/go-homedir"
-	"github.com/zackbloom/go-ini"
+	homedir "github.com/mitchellh/go-homedir"
+	ini "github.com/sspencer/go-ini"
 	"github.com/zackbloom/goamz/aws"
 	"github.com/zackbloom/goamz/cloudfront"
 	"github.com/zackbloom/goamz/iam"
@@ -30,16 +31,22 @@ var iamSession *iam.IAM
 var r53Session *route53.Route53
 var cfSession *cloudfront.CloudFront
 
-func getRegion(region string) aws.Region {
+func getRegion(region string, s3Host string) aws.Region {
 	regionS, ok := aws.Regions[region]
 	if !ok {
 		panic("Region not found")
 	}
+
+	log.Println("HOST", s3Host)
+	if s3Host != "" {
+		regionS.S3Endpoint = "https://" + s3Host
+		regionS.S3BucketEndpoint = "https://${bucket}." + s3Host
+	}
 	return regionS
 }
 
-func openS3(key, secret, region string) *s3.S3 {
-	regionS := getRegion(region)
+func openS3(key, secret, region, s3Host string) *s3.S3 {
+	regionS := getRegion(region, s3Host)
 
 	auth := aws.Auth{
 		AccessKey: key,
@@ -49,7 +56,7 @@ func openS3(key, secret, region string) *s3.S3 {
 }
 
 func openIAM(key, secret, region string) *iam.IAM {
-	regionS := getRegion(region)
+	regionS := getRegion(region, "")
 
 	auth := aws.Auth{
 		AccessKey: key,
@@ -107,6 +114,7 @@ type Options struct {
 	AWSKey     string `yaml:"key"`
 	AWSSecret  string `yaml:"secret"`
 	AWSRegion  string `yaml:"region"`
+	S3Host     string `yaml:"s3Host"`
 	NoUser     bool   `yaml:"-"`
 }
 
@@ -123,6 +131,7 @@ func parseOptions() (o Options, set *flag.FlagSet) {
 	set.StringVar(&o.AWSKey, "key", "", "The AWS key to use")
 	set.StringVar(&o.AWSSecret, "secret", "", "The AWS secret of the provided key")
 	set.StringVar(&o.AWSRegion, "region", "us-east-1", "The AWS region the S3 bucket is in")
+	set.StringVar(&o.S3Host, "s3-host", "s3.amazonaws.com", "The hostname of an S3 implementation, overrides region")
 	set.BoolVar(&o.NoUser, "no-user", false, "When creating, should we make a user account?")
 
 	set.Parse(os.Args[2:])
