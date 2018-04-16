@@ -300,7 +300,6 @@ It is possible to use a client-side router (where you have multiple request URLs
 #### For a Release (Cross Compiling)
 
 - Run `go get github.com/laher/goxc`
-- Run `go get code.google.com/p/go.tools/cmd/vet`
 - Run `./utils/xc.sh`
 
 The first run will take significantly longer than future runs.  The built files will be placed in the `./builds` directory.
