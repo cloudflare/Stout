@@ -14,7 +14,7 @@ import (
 
 // Find the best matching certificates to the domain name.
 // return the best matching certificate if a certificate exists
-// (see https://github.com/EagerIO/Stout/issues/20#issuecomment-232174716)
+// (see https://github.com/cloudflare/stout/issues/20#issuecomment-232174716)
 // or, if there is no certificate with the domain requested, return ""
 func findMatchingCertificate(acmService *acm.ACM, domain string, createSSL bool) (string, error) {
 	// list issued and pending certificates

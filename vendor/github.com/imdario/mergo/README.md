@@ -33,7 +33,7 @@ If you were using Mergo **before** April 6th 2015, please check your project wor
 - [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes)
 - [imdario/zas](https://github.com/imdario/zas)
 - [soniah/dnsmadeeasy](https://github.com/soniah/dnsmadeeasy)
-- [EagerIO/Stout](https://github.com/EagerIO/Stout)
+- [cloudflare/stout](https://github.com/cloudflare/stout)
 - [lynndylanhurley/defsynth-api](https://github.com/lynndylanhurley/defsynth-api)
 - [russross/canvasassignments](https://github.com/russross/canvasassignments)
 - [rdegges/cryptly-api](https://github.com/rdegges/cryptly-api)

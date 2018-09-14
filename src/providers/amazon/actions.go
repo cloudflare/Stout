@@ -4,10 +4,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/eagerio/Stout/src/providers/amazon/cdn"
-	"github.com/eagerio/Stout/src/providers/amazon/dns"
-	"github.com/eagerio/Stout/src/providers/amazon/fs"
-	"github.com/eagerio/Stout/src/types"
+	"github.com/cloudflare/stout/src/providers/amazon/cdn"
+	"github.com/cloudflare/stout/src/providers/amazon/dns"
+	"github.com/cloudflare/stout/src/providers/amazon/fs"
+	"github.com/cloudflare/stout/src/types"
 )
 
 func (a *client) CreateDNS(g types.GlobalFlags, c types.CreateFlags, cdnDomainName string) error {

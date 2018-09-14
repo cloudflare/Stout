@@ -4,12 +4,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/eagerio/Stout/src/providers"
-	"github.com/eagerio/Stout/src/providers/amazon"
-	"github.com/eagerio/Stout/src/providers/cloudflare"
-	"github.com/eagerio/Stout/src/providers/google"
-	"github.com/eagerio/Stout/src/providers/none"
-	"github.com/eagerio/Stout/src/types"
+	"github.com/cloudflare/stout/src/providers"
+	"github.com/cloudflare/stout/src/providers/amazon"
+	"github.com/cloudflare/stout/src/providers/cloudflare"
+	"github.com/cloudflare/stout/src/providers/google"
+	"github.com/cloudflare/stout/src/providers/none"
+	"github.com/cloudflare/stout/src/types"
 )
 
 var ProviderList = map[string]providers.ProviderClient{

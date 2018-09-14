@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/cenk/backoff"
-	"github.com/eagerio/Stout/src/types"
-	"github.com/eagerio/Stout/src/utils"
+	"github.com/cloudflare/stout/src/types"
+	"github.com/cloudflare/stout/src/utils"
 	"golang.org/x/net/html"
 
 	"log"
@@ -83,7 +83,7 @@ func uploadFileToProvider(fsFuncs types.FSProviderFunctions, req UploadFileReque
 			Body:         data,
 			MD5:          hash,
 			CacheSeconds: req.CacheSeconds,
-			ContentType:  guessContentType(req.Dest),
+			ContentType:  guessContentType(dest),
 		})
 	}
 

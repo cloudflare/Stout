@@ -31,7 +31,7 @@ We built Stout to fix these issues.
 
 ## Getting Started
 
-[Download](https://github.com/EagerIO/Stout/releases) the `stout` executable for your system from our latest release into a directory on your `$PATH`, like `/usr/local/bin`.
+[Download](https://github.com/cloudflare/stout/releases) the `stout` executable for your system from our latest release into a directory on your `$PATH`, like `/usr/local/bin`.
 
 You can use the `create` command to create a new site.  It automatically creates an S3 bucket, a CloudFront distribution, and a user account for deployment.  It therefore requires
 credentials for an Amazon AWS account which has permissions to those services along with Route 53.
@@ -242,7 +242,7 @@ Be sure to replace `DOMAIN` with your actual domain name.
  ```yaml
 dependencies:
   post:
-    - git clone git@github.com:EagerIO/Stout.git
+    - git clone git@github.com:cloudflare/stout.git
     - cd Stout; go build -o ../stout src/*.go
 
 deployment:
@@ -283,11 +283,11 @@ You can deploy multiple projects to the same domain simply by specifying the app
 
 It is possible to use a client-side router (where you have multiple request URLs point to the same HTML file) by configuring your CloudFront distribution to serve your index.html file in response to 403s and 404s.
 
-![CF](https://raw.githubusercontent.com/EagerIO/Stout/master/docs/images/cf-screenshot.png)
+![CF](https://raw.githubusercontent.com/cloudflare/stout/master/docs/images/cf-screenshot.png)
 
 ### Installing
 
-- Download the release for your system type from our [releases](https://github.com/EagerIO/Stout/releases)
+- Download the release for your system type from our [releases](https://github.com/cloudflare/stout/releases)
 - Copy or symlink the `stout` binary contained in the archive into your path (for example, into `/usr/local/bin`)
 
 ### Building

@@ -1,8 +1,8 @@
 package google
 
 import (
-	"github.com/eagerio/Stout/src/providers/google/fs"
-	"github.com/eagerio/Stout/src/types"
+	"github.com/cloudflare/stout/src/providers/google/fs"
+	"github.com/cloudflare/stout/src/types"
 )
 
 func (cl *client) CreateFS(g types.GlobalFlags, c types.CreateFlags) (string, error) {

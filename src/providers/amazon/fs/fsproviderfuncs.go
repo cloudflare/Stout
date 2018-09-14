@@ -7,10 +7,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"log"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/eagerio/Stout/src/types"
+	"github.com/cloudflare/stout/src/types"
 )
 
 func FSProviderFuncs(s3Session *s3.S3, domain string) (types.FSProviderFunctions, error) {
