@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/eagerio/Stout/src/providermgmt"
-	"github.com/eagerio/Stout/src/providers"
-	"github.com/eagerio/Stout/src/types"
+	"github.com/cloudflare/stout/src/providermgmt"
+	"github.com/cloudflare/stout/src/providers"
+	"github.com/cloudflare/stout/src/types"
 )
 
 func Create(g types.GlobalFlags, c types.CreateFlags) error {

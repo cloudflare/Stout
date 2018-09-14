@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/eagerio/Stout/src/providermgmt"
-	"github.com/eagerio/Stout/src/types"
+	"github.com/cloudflare/stout/src/providermgmt"
+	"github.com/cloudflare/stout/src/types"
 	"github.com/imdario/mergo"
 	yaml "gopkg.in/yaml.v1"
 )

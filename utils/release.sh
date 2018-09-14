@@ -7,7 +7,7 @@ RELEASE=$1
 git tag $RELEASE
 git push origin master --tags
 
-UPLOAD_URL=$(curl -X POST "https://api.github.com/repos/EagerIO/Stout/releases" \
+UPLOAD_URL=$(curl -X POST "https://api.github.com/repos/cloudflare/stout/releases" \
   -H "Accept: application/vnd.github.v3+json" \
   -H "Authorization: token $GITHUB_AUTH" \
   -H "Content-Type: application/json" \

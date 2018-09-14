@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/eagerio/Stout/src/utils"
+	"github.com/cloudflare/stout/src/utils"
 )
 
 const (

@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/eagerio/Stout/src/actions"
-	"github.com/eagerio/Stout/src/config"
-	"github.com/eagerio/Stout/src/providermgmt"
-	"github.com/eagerio/Stout/src/types"
-	"github.com/eagerio/Stout/src/utils"
+	"github.com/cloudflare/stout/src/actions"
+	"github.com/cloudflare/stout/src/config"
+	"github.com/cloudflare/stout/src/providermgmt"
+	"github.com/cloudflare/stout/src/types"
+	"github.com/cloudflare/stout/src/utils"
 	"github.com/urfave/cli"
 )
 

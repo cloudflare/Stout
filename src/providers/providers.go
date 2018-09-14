@@ -1,7 +1,7 @@
 package providers
 
 import (
-	"github.com/eagerio/Stout/src/types"
+	"github.com/cloudflare/stout/src/types"
 	"github.com/urfave/cli"
 )
 

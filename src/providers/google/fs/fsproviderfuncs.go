@@ -8,7 +8,7 @@ import (
 
 	"cloud.google.com/go/storage"
 
-	"github.com/eagerio/Stout/src/types"
+	"github.com/cloudflare/stout/src/types"
 )
 
 func FSProviderFuncs(gclient *storage.Client, ctx context.Context, domain string) (types.FSProviderFunctions, error) {

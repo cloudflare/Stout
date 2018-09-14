@@ -1,5 +1,5 @@
 {
-	"ImportPath": "github.com/eagerio/Stout",
+	"ImportPath": "github.com/cloudflare/stout",
 	"GoVersion": "go1.7",
 	"GodepVersion": "v78",
 	"Packages": [

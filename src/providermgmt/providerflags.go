@@ -3,8 +3,8 @@ package providermgmt
 import (
 	"strings"
 
-	"github.com/eagerio/Stout/src/providers"
-	"github.com/eagerio/Stout/src/utils"
+	"github.com/cloudflare/stout/src/providers"
+	"github.com/cloudflare/stout/src/utils"
 	"github.com/urfave/cli"
 )
 

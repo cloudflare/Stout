@@ -3,10 +3,10 @@ package actions
 import (
 	"errors"
 
-	"github.com/eagerio/Stout/src/actions/remotelogic"
-	"github.com/eagerio/Stout/src/providermgmt"
-	"github.com/eagerio/Stout/src/providers"
-	"github.com/eagerio/Stout/src/types"
+	"github.com/cloudflare/stout/src/actions/remotelogic"
+	"github.com/cloudflare/stout/src/providermgmt"
+	"github.com/cloudflare/stout/src/providers"
+	"github.com/cloudflare/stout/src/types"
 )
 
 func Deploy(g types.GlobalFlags, d types.DeployFlags) error {

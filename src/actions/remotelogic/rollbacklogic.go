@@ -7,7 +7,7 @@ import (
 
 	"code.cfops.it/apps/proxy/utils"
 
-	"github.com/eagerio/Stout/src/types"
+	"github.com/cloudflare/stout/src/types"
 )
 
 // Go go the version prefix folder on s3 and copy the html files over to the root as the currently active files

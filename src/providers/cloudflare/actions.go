@@ -7,7 +7,7 @@ import (
 	"golang.org/x/net/publicsuffix"
 
 	cloudflare "github.com/cloudflare/cloudflare-go"
-	"github.com/eagerio/Stout/src/types"
+	"github.com/cloudflare/stout/src/types"
 )
 
 var skipDNS = false
