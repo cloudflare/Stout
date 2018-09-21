@@ -115,7 +115,7 @@ The options are:
  The local directory where the files to be uploaded lives.  It's common to make this your "./build" directory or the like.
  
 ##### `files` ("*")
-  Comma-seperated glob patterns of the files to be deployed (within the `--root`).  HTML files will be parsed, and the CSS/JS they point to will be included (versioned) automatically.  If you also include those files in your glob pattern they will be uploaded twice, once with a versioning hash in the URL, again without.
+  Comma-separated glob patterns of the files to be deployed (within the `--root`).  HTML files will be parsed, and the CSS/JS they point to will be included (versioned) automatically.  If you also include those files in your glob pattern they will be uploaded twice, once with a versioning hash in the URL, again without.
   
   Be sure to include any additional files you would like deployed like images, videos, font files, etc.
 
@@ -274,7 +274,7 @@ Any other file included in your `--files` argument will be uploaded, but not ver
  
 ### Consistency
 
-As the final step of the deploy is atomic, multiple actors can trigger deploys simultaneously without any danger of inconsistent state.  Whichever process triggers the final 'copy' step for a given file will win, with it's specified dependencies guarenteed to be used in their entirity.  Note that this consistency is only guarenteed on a per-html-file level, you may end up with some html files from one deployer, and others from another, but all files will point to their correct dependencies.
+As the final step of the deploy is atomic, multiple actors can trigger deploys simultaneously without any danger of inconsistent state.  Whichever process triggers the final 'copy' step for a given file will win, with it's specified dependencies guaranteed to be used in their entirity.  Note that this consistency is only guaranteed on a per-html-file level, you may end up with some html files from one deployer, and others from another, but all files will point to their correct dependencies.
 
 ### Deploying Multiple Projects To One Site
 
