@@ -74,6 +74,7 @@ func uploadFileToProvider(fsFuncs types.FSProviderFunctions, req UploadFileReque
 		dest = hashPrefix + "_" + dest
 	}
 	dest = filepath.Join(req.Dest, dest)
+	dest = filepath.ToSlash(dest)
 
 	log.Printf("Uploading to %s in %s (%s) [%d]\n", dest, req.Bucket, hashPrefix, req.CacheSeconds)
 
