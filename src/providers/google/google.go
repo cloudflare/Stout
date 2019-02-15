@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
+	"google.golang.org/api/option"
 
 	"github.com/urfave/cli"
 )
@@ -27,11 +28,11 @@ func (c *client) Name() string {
 
 func (c *client) Flags() []cli.Flag {
 	return []cli.Flag{
-		// cli.StringFlag{
-		// 	Name:        "google-keyfile",
-		// 	Usage:       "Location of the service account json keyfile containing auth data",
-		// 	Destination: &c.Keyfile,
-		// },
+		cli.StringFlag{
+			Name:        "google-keyfile",
+			Usage:       "Location of the service account json keyfile containing auth data",
+			Destination: &c.Keyfile,
+		},
 		cli.StringFlag{
 			Name:        "google-project-id",
 			Usage:       "Project ID (not name) of the project to create the bucket inside of",
@@ -48,9 +49,9 @@ func (c *client) Flags() []cli.Flag {
 
 func (c *client) ValidateSettings() error {
 	var missingFlags []string
-	// if c.Keyfile == "" {
-	// 	missingFlags = append(missingFlags, "google-keyfile")
-	// }
+	if c.Keyfile == "" {
+		missingFlags = append(missingFlags, "google-keyfile")
+	}
 	if c.ProjectID == "" {
 		missingFlags = append(missingFlags, "google-project-id")
 	}
@@ -74,7 +75,7 @@ func (c *client) setup() error {
 	gclient, err = storage.NewClient(ctx)
 
 	// using the following line of code, will error out, commenting out keyfile based auth until this is resolved:
-	// gclient, err = storage.NewClient(ctx, option.WithServiceAccountFile(c.Keyfile))
+	gclient, err = storage.NewClient(ctx, option.WithServiceAccountFile(c.Keyfile))
 
 	return err
 }

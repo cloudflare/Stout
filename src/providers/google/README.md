@@ -8,7 +8,7 @@ There are a few steps to take before hosting your static website with google:
 
 * Enable API access
   * For the [google cloud storage api](https://console.cloud.google.com/apis/api/storage-component.googleapis.com/)
-  * And the [google cloud storage json api]( https://console.developers.google.com/apis/api/storage_api/overview)
+  * And the [google cloud storage json api](https://console.developers.google.com/apis/api/storage_api/overview)
 
 * Log in using `gcloud auth application-default login` on the command line
 

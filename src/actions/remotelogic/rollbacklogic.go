@@ -5,9 +5,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	"code.cfops.it/apps/proxy/utils"
-
 	"github.com/cloudflare/stout/src/types"
+	"github.com/cloudflare/stout/src/utils"
 )
 
 // Go go the version prefix folder on s3 and copy the html files over to the root as the currently active files

@@ -37,10 +37,6 @@
 			"Rev": "57377bad3486b37af17b47230a61603794c798ae"
 		},
 		{
-			"ImportPath": "code.cfops.it/apps/proxy/utils",
-			"Rev": "c371196c4bb42a8a8fcc6ac5611fa5203eaac2ed"
-		},
-		{
 			"ImportPath": "github.com/aws/aws-sdk-go/aws",
 			"Comment": "v1.8.4-3-ge8dd0cf",
 			"Rev": "e8dd0cf538447be8f8d88f2daabcf3210b9d3b68"
