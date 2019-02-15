@@ -18,6 +18,10 @@ func CreateFS(gclient *storage.Client, ctx context.Context, domain string, proje
 			},
 		},
 		Location: location,
+		Website: storage.BucketWebsite{
+			MainPageSuffix: "index.html",
+			NotFoundPage: "404.html",
+		}
 	})
 	if err != nil {
 		return err
