@@ -1,4 +1,4 @@
-// Copyright 2014 Google Inc. All Rights Reserved.
+// Copyright 2017 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,32 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +build go1.10
+
 package storage
 
-import (
-	"cloud.google.com/go/internal"
-	gax "github.com/googleapis/gax-go"
-	"golang.org/x/net/context"
-	"google.golang.org/api/googleapi"
-)
+import "google.golang.org/api/googleapi"
 
-// runWithRetry calls the function until it returns nil or a non-retryable error, or
-// the context is done.
-func runWithRetry(ctx context.Context, call func() error) error {
-	return internal.Retry(ctx, gax.Backoff{}, func() (stop bool, err error) {
-		err = call()
-		if err == nil {
-			return true, nil
-		}
-		e, ok := err.(*googleapi.Error)
-		if !ok {
-			return true, err
-		}
+func shouldRetry(err error) bool {
+	switch e := err.(type) {
+	case *googleapi.Error:
 		// Retry on 429 and 5xx, according to
 		// https://cloud.google.com/storage/docs/exponential-backoff.
-		if e.Code == 429 || (e.Code >= 500 && e.Code < 600) {
-			return false, nil
-		}
-		return true, err
-	})
+		return e.Code == 429 || (e.Code >= 500 && e.Code < 600)
+	case interface{ Temporary() bool }:
+		return e.Temporary()
+	default:
+		return false
+	}
 }
