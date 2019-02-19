@@ -18,15 +18,15 @@ func CreateFS(gclient *storage.Client, ctx context.Context, domain string, proje
 			},
 		},
 		Location: location,
-		Website: storage.BucketWebsite{
+		Website: &storage.BucketWebsite{
 			MainPageSuffix: "index.html",
-			NotFoundPage: "404.html",
-		}
+			NotFoundPage:   "404.html",
+		},
 	})
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Now that your bucket has been created, go to https://console.cloud.google.com/storage/browser?project=%s, click on the three dots on the right of the newly made bucket %s, select edit website configuration, and enter `index.html` and `404.html` in the respective blanks.\n", projectID, domain)
+	fmt.Printf("Your FS bucket has been created, and can be edited at https://console.cloud.google.com/storage/browser?project=%s!", projectID)
 	return nil
 }

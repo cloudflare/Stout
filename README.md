@@ -1,5 +1,23 @@
 # Stout
 
+Current TODOs:
+
+* Tested Providers:
+    * Google:
+        * [x] FS
+        * [ ] DNS
+        * [ ] CDN
+    * Cloudflare:
+        * [ ] FS
+        * [x] DNS
+        * [x] CDN
+    * Amazon:
+        * [ ] FS
+        * [ ] DNS
+        * [ ] CDN
+* [ ] Clean up Readme
+* [ ] Add "Getting Started" section
+
 #### [View the site →](http://stout.is/)
 
 Stout is a deploy tool for static websites.  It takes a website and uploads it to S3 in a more reliable way than other tools.  It can be an alternative

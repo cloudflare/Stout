@@ -1,19 +1,13 @@
 default:
-  root: '.'
+  global: 
+    root: '.'
+    domain: 'test.flagged.download'
 
+    dns: 'cloudflare'
+    fs: 'google'
+    cdn: 'cloudflare'
 
-# providers:
-#   google:
-#     project-id: "wise-arena-231723"
-
-  
-
-# production:
-#   key: 'XXX'
-#   secret: 'XXX'
-#   domain: 'eager.io'
-
-# development:
-#   key: 'XXX'
-#   secret: 'XXX'
-#   domain: 'next.eager.io'
+  providers:
+    google:
+      keyfile: './google-auth.json'
+      project-id: 'alien-sol-165018'
