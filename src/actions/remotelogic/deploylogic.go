@@ -289,7 +289,7 @@ func parseHTML(path string) (files []string, base string) {
 						}
 					}
 				}
-			//or link attibute
+			//or link attribute
 			case "link":
 				local := false
 				stylesheet := false
