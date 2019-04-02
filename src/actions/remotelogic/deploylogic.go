@@ -131,7 +131,7 @@ func writeFiles(fsFuncs types.FSProviderFunctions, domain string, dest string, i
 	}
 }
 
-// Deploy/upload files consurently
+// Deploy/upload files concurrently
 func deployFiles(fsFuncs types.FSProviderFunctions, domain string, dest string, includeHash bool, files []*FileRef) {
 	ch := make(chan *FileRef)
 
