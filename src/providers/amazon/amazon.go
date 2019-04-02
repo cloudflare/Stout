@@ -45,7 +45,7 @@ type AWSConfig struct {
 func loadAWSConfig() (access string, secret string) {
 	cfg := AWSConfig{}
 
-	//TODO: support windows loation for aws credentials
+	//TODO: support windows location for aws credentials
 	for _, file := range []string{"~/.aws/config", "~/.aws/credentials"} {
 		path, err := homedir.Expand(file)
 		if err != nil {
@@ -91,7 +91,7 @@ func (a *client) Flags() []cli.Flag {
 		},
 		cli.BoolFlag{
 			Name:        "aws-new-user",
-			Usage:       "Create a seperate IAM user for this bucket and distribution",
+			Usage:       "Create a separate IAM user for this bucket and distribution",
 			Destination: &a.NewUser,
 		},
 		cli.BoolFlag{

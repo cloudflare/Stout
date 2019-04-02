@@ -131,7 +131,7 @@ func writeFiles(fsFuncs types.FSProviderFunctions, domain string, dest string, i
 	}
 }
 
-// Deploy/upload files consurently
+// Deploy/upload files concurrently
 func deployFiles(fsFuncs types.FSProviderFunctions, domain string, dest string, includeHash bool, files []*FileRef) {
 	ch := make(chan *FileRef)
 
@@ -289,7 +289,7 @@ func parseHTML(path string) (files []string, base string) {
 						}
 					}
 				}
-			//or link attibute
+			//or link attribute
 			case "link":
 				local := false
 				stylesheet := false

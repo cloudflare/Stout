@@ -20,7 +20,7 @@ const (
 	FOREVER = 31556926
 )
 
-// Merge files using forward slashes and not the system path seperator if that is different
+// Merge files using forward slashes and not the system path separator if that is different
 // Useful since windows has backslash path separators instead of forward slash which is hard to use with S3
 func joinPath(parts ...string) string {
 	// Like filepath.Join, but always uses '/'

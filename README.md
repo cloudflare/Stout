@@ -45,7 +45,7 @@ We built Stout to fix these issues.
 ### Limitations
 
 - Stout doesn't currently support rolling back files that aren't HTML, JS or CSS (images, videos, etc.).  See the Versioning section for more information.
-- All-or-nothing consistency is only guarenteed on a per-html-file basis, not for the entire deploy.  See the Consistency section for more information.
+- All-or-nothing consistency is only guaranteed on a per-html-file basis, not for the entire deploy.  See the Consistency section for more information.
 
 ## Getting Started
 
@@ -82,7 +82,7 @@ If you don't want to deploy all the files in your folder, use the files argument
 stout deploy --domain my.website.com --key MY_AWS_KEY --secret MY_AWS_SECRET --root ./build --files "*.html,images/*"
 ```
 
-Javascript and CSS included in your HTML files will always be included automatically.
+JavaScript and CSS included in your HTML files will always be included automatically.
 
 The deploy command will give you a deploy id you can use in the future to rollback if you have to:
 
@@ -96,7 +96,7 @@ Using the info below you can learn about what the deploy/rollback tools actually
 
 ## Backstory
 
-We wrote Stout because we couldn't find an open-source way to reliably and efficiently deploy our static sites (including our app and blog).  We used a traditional upload-to-s3 tool, but caching meant a user could get the new html and styles, but the old scripts, for example, causing sporatic and random errors.  It also didn't support reliably rolling back when necessary.  We built Stout to be the reliable, production-ready choice for static deploys.
+We wrote Stout because we couldn't find an open-source way to reliably and efficiently deploy our static sites (including our app and blog).  We used a traditional upload-to-s3 tool, but caching meant a user could get the new html and styles, but the old scripts, for example, causing sporadic and random errors.  It also didn't support reliably rolling back when necessary.  We built Stout to be the reliable, production-ready choice for static deploys.
 
 ## Function
 
@@ -133,7 +133,7 @@ The options are:
  The local directory where the files to be uploaded lives.  It's common to make this your "./build" directory or the like.
 
 ##### `files` ("*")
-  Comma-seperated glob patterns of the files to be deployed (within the `--root`).  HTML files will be parsed, and the CSS/JS they point to will be included (versioned) automatically.  If you also include those files in your glob pattern they will be uploaded twice, once with a versioning hash in the URL, again without.
+  Comma-separated glob patterns of the files to be deployed (within the `--root`).  HTML files will be parsed, and the CSS/JS they point to will be included (versioned) automatically.  If you also include those files in your glob pattern they will be uploaded twice, once with a versioning hash in the URL, again without.
 
   Be sure to include any additional files you would like deployed like images, videos, font files, etc.
 
@@ -291,7 +291,7 @@ Any other file included in your `--files` argument will be uploaded, but not ver
 
 ### Consistency
 
-As the final step of the deploy is atomic, multiple actors can trigger deploys simultaneously without any danger of inconsistent state.  Whichever process triggers the final 'copy' step for a given file will win, with it's specified dependencies guarenteed to be used in their entirity.  Note that this consistency is only guarenteed on a per-html-file level, you may end up with some html files from one deployer, and others from another, but all files will point to their correct dependencies.
+As the final step of the deploy is atomic, multiple actors can trigger deploys simultaneously without any danger of inconsistent state.  Whichever process triggers the final 'copy' step for a given file will win, with it's specified dependencies guaranteed to be used in their entirety.  Note that this consistency is only guaranteed on a per-html-file level, you may end up with some html files from one deployer, and others from another, but all files will point to their correct dependencies.
 
 ### Deploying Multiple Projects To One Site
 
