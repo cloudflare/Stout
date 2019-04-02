@@ -45,7 +45,7 @@ We built Stout to fix these issues.
 ### Limitations
 
 - Stout doesn't currently support rolling back files that aren't HTML, JS or CSS (images, videos, etc.).  See the Versioning section for more information.
-- All-or-nothing consistency is only guarenteed on a per-html-file basis, not for the entire deploy.  See the Consistency section for more information.
+- All-or-nothing consistency is only guaranteed on a per-html-file basis, not for the entire deploy.  See the Consistency section for more information.
 
 ## Getting Started
 
@@ -291,7 +291,7 @@ Any other file included in your `--files` argument will be uploaded, but not ver
 
 ### Consistency
 
-As the final step of the deploy is atomic, multiple actors can trigger deploys simultaneously without any danger of inconsistent state.  Whichever process triggers the final 'copy' step for a given file will win, with it's specified dependencies guarenteed to be used in their entirety.  Note that this consistency is only guarenteed on a per-html-file level, you may end up with some html files from one deployer, and others from another, but all files will point to their correct dependencies.
+As the final step of the deploy is atomic, multiple actors can trigger deploys simultaneously without any danger of inconsistent state.  Whichever process triggers the final 'copy' step for a given file will win, with it's specified dependencies guaranteed to be used in their entirety.  Note that this consistency is only guaranteed on a per-html-file level, you may end up with some html files from one deployer, and others from another, but all files will point to their correct dependencies.
 
 ### Deploying Multiple Projects To One Site
 
