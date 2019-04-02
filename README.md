@@ -82,7 +82,7 @@ If you don't want to deploy all the files in your folder, use the files argument
 stout deploy --domain my.website.com --key MY_AWS_KEY --secret MY_AWS_SECRET --root ./build --files "*.html,images/*"
 ```
 
-Javascript and CSS included in your HTML files will always be included automatically.
+JavaScript and CSS included in your HTML files will always be included automatically.
 
 The deploy command will give you a deploy id you can use in the future to rollback if you have to:
 
