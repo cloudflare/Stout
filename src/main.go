@@ -100,7 +100,7 @@ func main() {
 				cli.StringFlag{
 					Name:        "files",
 					Value:       "*.html",
-					Usage:       "Comma-seperated glob patterns of files to deploy (within root) independently from html referenced js and css files",
+					Usage:       "Comma-separated glob patterns of files to deploy (within root) independently from html referenced js and css files",
 					Destination: &envHolder.DeployFlags.Files,
 				},
 				cli.StringFlag{

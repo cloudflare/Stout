@@ -91,7 +91,7 @@ func (a *client) Flags() []cli.Flag {
 		},
 		cli.BoolFlag{
 			Name:        "aws-new-user",
-			Usage:       "Create a seperate IAM user for this bucket and distribution",
+			Usage:       "Create a separate IAM user for this bucket and distribution",
 			Destination: &a.NewUser,
 		},
 		cli.BoolFlag{

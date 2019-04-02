@@ -133,7 +133,7 @@ The options are:
  The local directory where the files to be uploaded lives.  It's common to make this your "./build" directory or the like.
 
 ##### `files` ("*")
-  Comma-seperated glob patterns of the files to be deployed (within the `--root`).  HTML files will be parsed, and the CSS/JS they point to will be included (versioned) automatically.  If you also include those files in your glob pattern they will be uploaded twice, once with a versioning hash in the URL, again without.
+  Comma-separated glob patterns of the files to be deployed (within the `--root`).  HTML files will be parsed, and the CSS/JS they point to will be included (versioned) automatically.  If you also include those files in your glob pattern they will be uploaded twice, once with a versioning hash in the URL, again without.
 
   Be sure to include any additional files you would like deployed like images, videos, font files, etc.
 
