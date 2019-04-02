@@ -96,7 +96,7 @@ Using the info below you can learn about what the deploy/rollback tools actually
 
 ## Backstory
 
-We wrote Stout because we couldn't find an open-source way to reliably and efficiently deploy our static sites (including our app and blog).  We used a traditional upload-to-s3 tool, but caching meant a user could get the new html and styles, but the old scripts, for example, causing sporatic and random errors.  It also didn't support reliably rolling back when necessary.  We built Stout to be the reliable, production-ready choice for static deploys.
+We wrote Stout because we couldn't find an open-source way to reliably and efficiently deploy our static sites (including our app and blog).  We used a traditional upload-to-s3 tool, but caching meant a user could get the new html and styles, but the old scripts, for example, causing sporadic and random errors.  It also didn't support reliably rolling back when necessary.  We built Stout to be the reliable, production-ready choice for static deploys.
 
 ## Function
 
