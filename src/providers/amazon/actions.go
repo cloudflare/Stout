@@ -51,7 +51,7 @@ func (a *client) CreateCDN(g types.GlobalFlags, c types.CreateFlags, fsDomain st
 	}
 
 	if certificateARN == "" {
-		fmt.Println("Will set up CloudFront distrbution without SSL/TLS")
+		fmt.Println("Will set up CloudFront distribution without SSL/TLS")
 	}
 
 	fmt.Println("Loading/Creating CloudFront Distribution")
