@@ -45,7 +45,7 @@ type AWSConfig struct {
 func loadAWSConfig() (access string, secret string) {
 	cfg := AWSConfig{}
 
-	//TODO: support windows loation for aws credentials
+	//TODO: support windows location for aws credentials
 	for _, file := range []string{"~/.aws/config", "~/.aws/credentials"} {
 		path, err := homedir.Expand(file)
 		if err != nil {
